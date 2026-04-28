@@ -1,0 +1,22 @@
+[package]
+name        = "arc"
+description = "ARC (Authenticated Received Chain) signing and validation per RFC 8617"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+email-primitives  = { workspace = true }
+dkim              = { workspace = true }
+bytes             = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true }
+tracing           = { workspace = true }
+winnow            = { workspace = true }
+ring              = { workspace = true }
+base64            = { workspace = true }
+hickory-resolver  = { workspace = true }
+
+[lints]
+workspace = true
