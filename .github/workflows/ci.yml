@@ -26,8 +26,11 @@ jobs:
     - name: Cache build artifacts
       uses: Swatinem/rust-cache@v2
 
-    - name: cargo test
-      run: cargo test --workspace
+    - name: Install cargo-nextest
+      uses: taiki-e/install-action@nextest
+
+    - name: cargo nextest run
+      run: cargo nextest run --workspace --profile ci
 
     - name: Show Git Status
       run: git status

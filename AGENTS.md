@@ -37,10 +37,16 @@ Filling in those stubs is the primary work remaining.
 
 ```sh
 cargo check --workspace --all-targets   # fast type-check
-cargo test --workspace                  # compile and run tests
+cargo nextest run --workspace           # compile and run tests
 cargo clippy --workspace --all-targets  # lint
 cargo fmt --check                       # formatting check
 cargo fmt                               # fix formatting
+```
+
+Install cargo-nextest if you don't have it:
+
+```sh
+cargo install cargo-nextest --locked
 ```
 
 Run pre-commit locally:

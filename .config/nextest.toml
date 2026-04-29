@@ -1,0 +1,7 @@
+[profile.default]
+failure-output = "immediate"
+final-status-level = "flaky"
+
+[profile.ci]
+failure-output = "immediate-final"
+final-status-level = "all"
