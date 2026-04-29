@@ -61,8 +61,27 @@ impl Message {
     ///
     /// Returns an error if the header section is malformed, or if the
     /// header/body separator is absent.
-    pub fn parse(_input: Bytes) -> Result<Self> {
-        todo!("split at first CRLF CRLF; parse Headers; wrap remainder as MessageBody")
+    pub fn parse(input: Bytes) -> Result<Self> {
+        // RFC 5322 §2.1: the first blank line (CRLF CRLF) separates headers
+        // from the body. windows(4) finds it; we pass everything up to and
+        // including that separator to Headers::parse.
+        let sep = input
+            .windows(4)
+            .position(|w| w == b"\r\n\r\n")
+            .ok_or_else(|| crate::Error::MalformedMessage {
+                reason: "missing header/body separator (CRLF CRLF)".to_owned(),
+            })?;
+
+        // Headers::parse expects the blank line as its terminator.
+        let (headers, leftover) = Headers::parse(&input[..sep + 4])?;
+        debug_assert!(leftover.is_empty(), "Headers::parse left unexpected bytes");
+
+        // Body is everything after CRLF CRLF — zero-copy slice of the input.
+        let body = input.slice(sep + 4..);
+        Ok(Message {
+            headers,
+            body: MessageBody::new(body),
+        })
     }
 
     /// Serialise the message back to wire-format bytes.
@@ -70,12 +89,25 @@ impl Message {
     /// Output is `<headers section>\r\n<body>` where the headers section
     /// already contains the per-field terminating CRLFs.
     pub fn to_bytes(&self) -> Bytes {
-        todo!("concatenate header wire forms + CRLF + body bytes")
+        let mut buf = Vec::with_capacity(self.wire_len());
+        for header in self.headers.iter() {
+            buf.extend_from_slice(header.to_wire().as_bytes());
+        }
+        buf.extend_from_slice(b"\r\n"); // blank line separator
+        buf.extend_from_slice(self.body.as_bytes());
+        Bytes::from(buf)
     }
 
     /// Return the total length of the message in bytes (wire representation).
     pub fn wire_len(&self) -> usize {
-        todo!()
+        // Allocation-free: name + ':' + value + CRLF for each header,
+        // plus 2 bytes for the blank-line separator, plus body length.
+        self.headers
+            .iter()
+            .map(|h| h.name.as_str().len() + 1 + h.value.as_str().len() + 2)
+            .sum::<usize>()
+            + 2
+            + self.body.len()
     }
 }
 
@@ -123,5 +155,78 @@ impl MessageBody {
     /// True if the body is empty.
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod rfc5322_message {
+    use super::*;
+
+    fn simple_bytes() -> Bytes {
+        Bytes::from_static(
+            b"From: alice@example.com\r\nTo: bob@example.com\r\nSubject: Test\r\n\r\nHello body\r\n",
+        )
+    }
+
+    /// RFC 5322 §2.1: parse splits headers and body at the first CRLF CRLF.
+    #[test]
+    fn parse_splits_correctly() {
+        let msg = Message::parse(simple_bytes()).unwrap();
+        assert_eq!(msg.headers.len(), 3);
+        assert_eq!(msg.body.as_bytes(), b"Hello body\r\n");
+    }
+
+    /// RFC 5322 §3.5: an empty body is valid.
+    #[test]
+    fn parse_empty_body() {
+        let input = Bytes::from_static(b"From: a@b.com\r\n\r\n");
+        let msg = Message::parse(input).unwrap();
+        assert_eq!(msg.headers.len(), 1);
+        assert!(msg.body.is_empty());
+    }
+
+    /// RFC 5322 §2.1: body may itself contain CRLF CRLF; only the first
+    /// occurrence separates headers from body.
+    #[test]
+    fn crlf_in_body_not_confused_with_separator() {
+        let input = Bytes::from_static(b"From: a@b.com\r\n\r\nPara 1\r\n\r\nPara 2\r\n");
+        let msg = Message::parse(input).unwrap();
+        assert_eq!(msg.body.as_bytes(), b"Para 1\r\n\r\nPara 2\r\n");
+    }
+
+    /// Round-trip: parse → to_bytes must reproduce the original bytes exactly.
+    #[test]
+    fn round_trip() {
+        let original = simple_bytes();
+        let msg = Message::parse(original.clone()).unwrap();
+        let serialised = msg.to_bytes();
+        assert_eq!(serialised, original);
+    }
+
+    /// wire_len must equal the length of to_bytes().
+    #[test]
+    fn wire_len_matches_to_bytes() {
+        let msg = Message::parse(simple_bytes()).unwrap();
+        assert_eq!(msg.wire_len(), msg.to_bytes().len());
+    }
+
+    /// RFC 5322 §2.1: missing CRLF CRLF separator is an error.
+    #[test]
+    fn reject_no_separator() {
+        let input = Bytes::from_static(b"From: a@b.com\r\nNo separator here");
+        assert!(Message::parse(input).is_err());
+    }
+
+    /// Body bytes are a zero-copy slice of the input Bytes.
+    #[test]
+    fn body_is_zero_copy_slice() {
+        let original = simple_bytes();
+        let msg = Message::parse(original.clone()).unwrap();
+        // The body slice should share the same underlying allocation.
+        assert_eq!(
+            msg.body.as_bytes().as_ptr() as usize,
+            original[original.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4..].as_ptr()
+                as usize
+        );
     }
 }
