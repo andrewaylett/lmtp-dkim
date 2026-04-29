@@ -55,7 +55,10 @@ use tracing_subscriber::EnvFilter;
 
 /// Command-line arguments.
 #[derive(Debug, Parser)]
-#[command(name = "lmtp-dkim", about = "LMTP DKIM-signing and ARC-sealing service")]
+#[command(
+    name = "lmtp-dkim",
+    about = "LMTP DKIM-signing and ARC-sealing service"
+)]
 struct Args {
     /// Path to the TOML configuration file.
     ///

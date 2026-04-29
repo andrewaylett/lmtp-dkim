@@ -52,10 +52,10 @@
 //!
 //! Two algorithms apply independently to headers and body:
 //!
-//! | Algorithm | Headers | Body |
-//! |-----------|---------|------|
-//! | `simple`  | Field names and values unchanged | Trailing empty lines removed; single CRLF appended |
-//! | `relaxed` | Names lowercased; value WSP normalised | Line-internal WSP collapsed; trailing WSP removed; trailing empty lines removed; single CRLF appended |
+//! | Algorithm | Header treatment | Body treatment |
+//! |-----------|-----------------|----------------|
+//! | `simple`  | Names and values unchanged | Strip trailing CRLFs; append one CRLF |
+//! | `relaxed` | Lowercase names; normalise WSP | Compress WSP; strip trailing; append CRLF |
 //!
 //! The `c=` tag encodes `<header>/<body>`, e.g. `relaxed/relaxed`.
 //!

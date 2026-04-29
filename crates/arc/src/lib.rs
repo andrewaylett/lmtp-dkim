@@ -15,11 +15,11 @@
 //! a set of three header fields, called an **ARC Set**, identified by an
 //! instance number `i` starting at 1 and incrementing at each hop:
 //!
-//! | Header | Tag | Purpose |
-//! |--------|-----|---------|
-//! | `ARC-Authentication-Results` (AAR) | `i=`, `authserv-id=` | Authentication results at this hop (SPF, DKIM, DMARC, ARC) |
-//! | `ARC-Message-Signature` (AMS) | `i=`, same tags as DKIM-Signature | DKIM-like signature of the message as received at this hop |
-//! | `ARC-Seal` (AS) | `i=`, `cv=`, same algorithm tags | Signature over the entire ARC chain up to this hop |
+//! | Header (abbr) | Key tags | Purpose |
+//! |---------------|----------|---------|
+//! | ARC-Authentication-Results (AAR) | `i=`, `authserv-id=` | Auth results at this hop |
+//! | ARC-Message-Signature (AMS) | `i=`, DKIM-Signature tags | Message signature at this hop |
+//! | ARC-Seal (AS) | `i=`, `cv=`, algorithm | Seals the full ARC chain |
 //!
 //! The header ordering requirement (RFC 8617 §5.1): ARC-Authentication-Results
 //! MUST be added before ARC-Message-Signature, which MUST be added before
