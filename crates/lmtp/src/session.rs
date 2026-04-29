@@ -188,4 +188,3 @@ impl<H: MessageHandler> Session<H> {
         )
     }
 }
-

@@ -63,7 +63,9 @@ pub struct CommandCodec {
 impl CommandCodec {
     /// Construct a [`CommandCodec`] with the default command-line length limit.
     pub fn new() -> Self {
-        Self { max_line: MAX_COMMAND_LINE }
+        Self {
+            max_line: MAX_COMMAND_LINE,
+        }
     }
 }
 

@@ -93,7 +93,10 @@ impl AuthResultsValue {
             out.push_str(&format!(" reason={reason:?}"));
         }
         for prop in &self.properties {
-            out.push_str(&format!("\n    {}.{}={}", prop.ptype, prop.property, prop.value));
+            out.push_str(&format!(
+                "\n    {}.{}={}",
+                prop.ptype, prop.property, prop.value
+            ));
         }
         out
     }

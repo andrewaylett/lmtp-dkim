@@ -206,7 +206,7 @@ fn default_signed_headers() -> Vec<String> {
         "from".into(),
         "from".into(), // over-signing
         "to".into(),
-        "to".into(),   // over-signing
+        "to".into(), // over-signing
         "cc".into(),
         "subject".into(),
         "date".into(),

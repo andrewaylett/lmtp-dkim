@@ -85,7 +85,10 @@ impl ReplyCode {
     ///
     /// Panics if `code` is not in `200..=599`.
     pub fn new(code: u16) -> Self {
-        assert!((200..=599).contains(&code), "reply code out of range: {code}");
+        assert!(
+            (200..=599).contains(&code),
+            "reply code out of range: {code}"
+        );
         ReplyCode(code)
     }
 
@@ -161,7 +164,10 @@ impl Reply {
 
     /// `220 <hostname> LMTP service ready`
     pub fn greeting(hostname: &str) -> Self {
-        Self::new(ReplyCode::SERVICE_READY, format!("{hostname} LMTP service ready"))
+        Self::new(
+            ReplyCode::SERVICE_READY,
+            format!("{hostname} LMTP service ready"),
+        )
     }
 
     /// `221 <hostname> Bye`
@@ -176,12 +182,18 @@ impl Reply {
 
     /// `354 End data with <CR><LF>.<CR><LF>`
     pub fn start_data() -> Self {
-        Self::new(ReplyCode::START_MAIL_INPUT, "End data with <CR><LF>.<CR><LF>")
+        Self::new(
+            ReplyCode::START_MAIL_INPUT,
+            "End data with <CR><LF>.<CR><LF>",
+        )
     }
 
     /// `500 Syntax error, command unrecognised`
     pub fn syntax_error() -> Self {
-        Self::new(ReplyCode::SYNTAX_ERROR, "Syntax error, command unrecognised")
+        Self::new(
+            ReplyCode::SYNTAX_ERROR,
+            "Syntax error, command unrecognised",
+        )
     }
 
     /// `503 Bad sequence of commands`
