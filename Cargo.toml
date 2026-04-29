@@ -57,5 +57,20 @@ clap  = { version = "4", features = ["derive", "env"] }
 anyhow = "1"
 
 [workspace.lints.rust]
-missing_docs    = "warn"
+dead_code       = "deny"
+missing_docs    = "deny"
 unreachable_pub = "warn"
+unused_imports  = "deny"
+
+[workspace.lints.clippy]
+# Lint groups (lower priority so individual overrides take effect)
+all      = { level = "deny", priority = -3 }
+pedantic = { level = "deny", priority = -2 }
+nursery  = { level = "deny", priority = -1 }
+# Selected restriction lints
+allow_attributes_without_reason = "deny"
+unwrap_used                      = "deny"
+# Project-wide allowances
+missing_panics_doc      = "allow"  # stubs use todo!() which panics; revisit once implemented
+module_name_repetitions = "allow"  # conventional for re-exported types (e.g. dkim::DkimSignature)
+wildcard_imports        = "allow"  # idiomatic in test modules (use super::*)

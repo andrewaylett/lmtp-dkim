@@ -101,7 +101,7 @@ pub enum ListenConfig {
     },
 }
 
-fn default_socket_mode() -> u32 {
+const fn default_socket_mode() -> u32 {
     0o600
 }
 
@@ -197,7 +197,7 @@ impl Default for ServerSettings {
     }
 }
 
-fn default_max_message_size() -> usize {
+const fn default_max_message_size() -> usize {
     50 * 1024 * 1024
 }
 
@@ -226,7 +226,7 @@ impl Config {
         let default_path = PathBuf::from("/etc/lmtp-dkim/config.toml");
         let effective_path = path.unwrap_or(&default_path);
         let raw = std::fs::read_to_string(effective_path)?;
-        let config: Config = toml::from_str(&raw)?;
+        let config: Self = toml::from_str(&raw)?;
         config.validate()?;
         Ok(config)
     }

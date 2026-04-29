@@ -28,7 +28,12 @@
 
 use email_primitives::Domain;
 
-use crate::{Error, Result, tag_list::TagList};
+#[expect(
+    unused_imports,
+    reason = "stub: TagList used when parse() is implemented"
+)]
+use crate::tag_list::TagList;
+use crate::{Error, Result};
 
 /// The signing algorithm used in `a=`.
 ///
@@ -49,10 +54,14 @@ pub enum Algorithm {
 
 impl Algorithm {
     /// Parse the algorithm tag value string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidTag`] for unknown or deprecated algorithms.
     pub fn parse(s: &str) -> Result<Self> {
         match s {
-            "rsa-sha256" => Ok(Algorithm::RsaSha256),
-            "ed25519-sha256" => Ok(Algorithm::Ed25519Sha256),
+            "rsa-sha256" => Ok(Self::RsaSha256),
+            "ed25519-sha256" => Ok(Self::Ed25519Sha256),
             "rsa-sha1" => Err(Error::InvalidTag {
                 tag: "a",
                 reason: "rsa-sha1 is deprecated and MUST NOT be used (RFC 8301)".to_owned(),
@@ -65,10 +74,11 @@ impl Algorithm {
     }
 
     /// The wire representation for the `a=` tag.
-    pub fn as_str(self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
-            Algorithm::RsaSha256 => "rsa-sha256",
-            Algorithm::Ed25519Sha256 => "ed25519-sha256",
+            Self::RsaSha256 => "rsa-sha256",
+            Self::Ed25519Sha256 => "ed25519-sha256",
         }
     }
 }
@@ -86,6 +96,10 @@ pub enum CanonicalizationAlgorithm {
 
 impl CanonicalizationAlgorithm {
     /// Parse `"simple"` or `"relaxed"`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidTag`] for unknown algorithm names.
     pub fn parse(s: &str) -> Result<Self> {
         match s {
             "simple" => Ok(Self::Simple),
@@ -98,7 +112,8 @@ impl CanonicalizationAlgorithm {
     }
 
     /// The wire representation.
-    pub fn as_str(self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::Simple => "simple",
             Self::Relaxed => "relaxed",
@@ -119,7 +134,7 @@ pub struct Canonicalization {
 
 impl Canonicalization {
     /// `relaxed/relaxed` – the most common production choice.
-    pub const RELAXED_RELAXED: Canonicalization = Canonicalization {
+    pub const RELAXED_RELAXED: Self = Self {
         header: CanonicalizationAlgorithm::Relaxed,
         body: CanonicalizationAlgorithm::Relaxed,
     };
@@ -128,12 +143,17 @@ impl Canonicalization {
     ///
     /// If the body algorithm is absent, it defaults to `simple`
     /// (RFC 6376 §3.5 `c=` tag description).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidTag`] if either algorithm name is unknown.
     pub fn parse(s: &str) -> Result<Self> {
         let _ = s;
         todo!("split on '/'; parse each half; default body to simple if absent")
     }
 
     /// Serialise to `<header>/<body>`.
+    #[must_use]
     pub fn as_str(self) -> String {
         format!("{}/{}", self.header.as_str(), self.body.as_str())
     }
@@ -194,6 +214,11 @@ impl DkimSignature {
     ///
     /// Validates that all required tags (`v`, `a`, `b`, `bh`, `d`, `h`, `s`)
     /// are present and that `v=1`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::MissingTag`] for absent required tags, or
+    /// [`Error::InvalidTag`] for malformed values.
     pub fn parse(_value: &str) -> Result<Self> {
         todo!(
             "TagList::parse(value); extract required tags; \
@@ -208,6 +233,7 @@ impl DkimSignature {
     /// The `b=` tag is included with the actual signature value. Use
     /// [`DkimSignature::to_signing_input`] to obtain the hash input (with `b=`
     /// empty).
+    #[must_use]
     pub fn to_tag_list(&self) -> String {
         todo!("emit all tags in canonical order; base64-encode b and bh; fold long lines")
     }
@@ -216,6 +242,7 @@ impl DkimSignature {
     ///
     /// This is the tag-list with `b=` set to empty, as specified in
     /// RFC 6376 §3.7 step 5.
+    #[must_use]
     pub fn to_signing_input(&self) -> String {
         todo!("same as to_tag_list but with b= empty")
     }

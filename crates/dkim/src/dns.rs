@@ -37,8 +37,13 @@
 
 use hickory_resolver::TokioAsyncResolver;
 
+#[expect(
+    unused_imports,
+    reason = "stub: Error variants referenced when implemented"
+)]
+use crate::Error;
+use crate::Result;
 use crate::key::PublicKey;
-use crate::{Error, Result};
 
 /// A parsed DKIM DNS record.
 #[derive(Debug, Clone)]
@@ -62,7 +67,7 @@ pub struct DkimDnsRecord {
 /// Key type from the `k=` DNS tag.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyType {
-    /// `k=rsa` – RSA public key in SubjectPublicKeyInfo (SPKI) DER format,
+    /// `k=rsa` – RSA public key in `SubjectPublicKeyInfo` (SPKI) DER format,
     /// base64-encoded (RFC 6376 §3.6.1).
     Rsa,
     /// `k=ed25519` – Ed25519 public key as 32 raw bytes, base64-encoded
@@ -83,6 +88,11 @@ pub enum DnsFlag {
 
 impl DkimDnsRecord {
     /// Parse a DKIM DNS TXT record string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::TagListParse`] on syntax errors, or
+    /// [`crate::Error::DnsPermError`] if the `p=` key is empty (revoked).
     pub fn parse(_txt: &str) -> Result<Self> {
         todo!(
             "TagList::parse(txt); extract k, p, v, t; \
@@ -92,7 +102,9 @@ impl DkimDnsRecord {
 
     /// Convert the record into a usable [`PublicKey`].
     ///
-    /// Returns [`Error::DnsPermError`] if the key is revoked (empty `p=`).
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::DnsPermError`] if the key is revoked (empty `p=`).
     pub fn into_public_key(self) -> Result<PublicKey> {
         let _ = self;
         todo!("match key_type; decode DER bytes via ring; return PublicKey")
@@ -104,12 +116,21 @@ impl DkimDnsRecord {
 /// A single [`DkimResolver`] instance should be shared across the service
 /// (e.g. via `Arc`) to benefit from the internal DNS cache.
 pub struct DkimResolver {
+    #[expect(dead_code, reason = "stub: used by lookup() once implemented")]
     inner: TokioAsyncResolver,
 }
 
 impl DkimResolver {
     /// Construct a new resolver using the system's DNS configuration
     /// (`/etc/resolv.conf` on Linux).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the system resolver configuration cannot be read.
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await resolver once implemented"
+    )]
     pub async fn from_system_conf() -> Result<Self> {
         todo!("TokioAsyncResolver::from_system_conf(ResolverOpts::default())")
     }
@@ -120,10 +141,14 @@ impl DkimResolver {
     ///
     /// # Errors
     ///
-    /// - [`Error::DnsTempError`] for transient failures (SERVFAIL, timeout).
-    /// - [`Error::DnsPermError`] for NXDOMAIN or empty `p=` (revoked key).
-    /// - [`Error::KeyDecode`] if the record is present but the key bytes are
+    /// - [`crate::Error::DnsTempError`] for transient failures (SERVFAIL, timeout).
+    /// - [`crate::Error::DnsPermError`] for NXDOMAIN or empty `p=` (revoked key).
+    /// - [`crate::Error::KeyDecode`] if the record is present but the key bytes are
     ///   malformed.
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await inner.txt_lookup once implemented"
+    )]
     pub async fn lookup(
         &self,
         selector: &str,

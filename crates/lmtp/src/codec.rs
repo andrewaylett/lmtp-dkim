@@ -57,12 +57,14 @@ pub const DEFAULT_MAX_MESSAGE_SIZE: usize = 50 * 1024 * 1024; // 50 MiB
 #[derive(Debug, Default)]
 pub struct CommandCodec {
     /// Maximum line length before returning an error.
+    #[expect(dead_code, reason = "stub: enforced in decode() once implemented")]
     max_line: usize,
 }
 
 impl CommandCodec {
     /// Construct a [`CommandCodec`] with the default command-line length limit.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             max_line: MAX_COMMAND_LINE,
         }
@@ -97,12 +99,14 @@ impl Encoder<&str> for CommandCodec {
 #[derive(Debug)]
 pub struct DataCodec {
     /// Maximum total body size before returning an error.
+    #[expect(dead_code, reason = "stub: enforced in decode() once implemented")]
     max_size: usize,
 }
 
 impl DataCodec {
     /// Construct a [`DataCodec`] with a configurable maximum message size.
-    pub fn new(max_size: usize) -> Self {
+    #[must_use]
+    pub const fn new(max_size: usize) -> Self {
         Self { max_size }
     }
 }

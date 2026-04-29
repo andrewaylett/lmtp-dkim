@@ -9,29 +9,20 @@
 //!
 //! 2. **Group** them into [`ArcSet`]s by instance number.
 //!
-//! 3. **Check structure**:
-//!    - Instance numbers must be contiguous integers starting at 1.
-//!    - Each instance must have exactly one of each header type.
-//!    - The highest instance's `ARC-Seal` must have `cv=none` iff `i=1`,
-//!      or `cv=pass`/`cv=fail` for `i>1`.
+//! 3. **Check structure**: instance numbers must be contiguous integers
+//!    starting at 1; each instance must have exactly one of each header type;
+//!    the highest instance's ARC-Seal must have `cv=none` iff `i=1`.
 //!
 //! 4. **Verify the oldest AMS** (`i=1`): this is a DKIM signature over the
 //!    original message body and selected headers. If it fails, the chain fails.
 //!
-//! 5. **Verify each ARC-Seal** in ascending order of `i`:
-//!    - The Seal covers all ARC headers from instances 1 through `i`.
-//!    - Specifically, the hash input for AS with instance `i` is the
-//!      concatenation (bottom-up) of all:
-//!      - `ARC-Authentication-Results` from `i=1` through `i=i`
-//!      - `ARC-Message-Signature` from `i=1` through `i=i`
-//!      - `ARC-Seal` from `i=1` through `i=i-1` (not the current one)
-//!      plus the current `ARC-Seal` with `b=` empty.
-//!    - The hash input order follows RFC 8617 §5.1.1.
+//! 5. **Verify each ARC-Seal** in ascending order of `i`. The hash input for
+//!    AS with instance `i` covers all AAR and AMS headers from i=1..N, all
+//!    AS headers from i=1..N-1 (bottom-up), plus the current AS with `b=`
+//!    empty. See RFC 8617 §5.1.1.
 //!
-//! 6. **Report** the result:
-//!    - `none` if there are no ARC headers.
-//!    - `pass` if all verifications succeeded.
-//!    - `fail` if any verification failed.
+//! 6. **Report** the result: `none` if there are no ARC headers; `pass` if
+//!    all verifications succeeded; `fail` if any verification failed.
 //!
 //! # Chain result in Authentication-Results
 //!
@@ -58,7 +49,8 @@ pub enum ArcChainResult {
 
 impl ArcChainResult {
     /// The `arc=<result>` string for an `Authentication-Results` header.
-    pub fn as_str(self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
             Self::Pass => "pass",
@@ -90,12 +82,14 @@ pub struct ChainValidator {
     ///
     /// ARC uses the same DNS key publication mechanism as DKIM
     /// (`<selector>._domainkey.<domain>` TXT records).
+    #[expect(dead_code, reason = "stub: used by validate() once implemented")]
     resolver: dkim::dns::DkimResolver,
 }
 
 impl ChainValidator {
     /// Construct a validator with the provided DNS resolver.
-    pub fn new(resolver: dkim::dns::DkimResolver) -> Self {
+    #[must_use]
+    pub const fn new(resolver: dkim::dns::DkimResolver) -> Self {
         Self { resolver }
     }
 
@@ -109,6 +103,10 @@ impl ChainValidator {
     /// Only structural errors (e.g. missing ARC headers in a set, non-
     /// contiguous instance numbers) are returned as `Err`. Cryptographic
     /// failures produce `ArcChainResult::Fail` inside the `Ok` value.
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await DNS calls once implemented"
+    )]
     pub async fn validate(&self, message: &Message) -> Result<ChainValidationOutput> {
         let _ = message;
         todo!(
@@ -124,6 +122,7 @@ impl ChainValidator {
     /// Collect all ARC headers from a message and group them into [`ArcSet`]s.
     ///
     /// Returns sets sorted by ascending instance number.
+    #[expect(dead_code, reason = "stub: called by validate() once implemented")]
     fn collect_arc_sets(_message: &Message) -> Result<Vec<ArcSet>> {
         todo!(
             "scan headers for ARC-Seal, ARC-Message-Signature, ARC-Authentication-Results; \
@@ -136,6 +135,11 @@ impl ChainValidator {
     ///
     /// This is a standard DKIM verification (RFC 8617 §6.1 step 3). It covers
     /// the message as it was first received by the ARC chain.
+    #[expect(dead_code, reason = "stub: called by validate() once implemented")]
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await resolver once implemented"
+    )]
     async fn verify_oldest_ams(
         _set: &ArcSet,
         _message: &Message,
@@ -156,6 +160,11 @@ impl ChainValidator {
     /// - All ARC-Message-Signatures i=1 through i=N (top-down)
     /// - All ARC-Seals i=1 through i=N-1 (top-down, NOT the current seal)
     /// - The current ARC-Seal header with `b=` empty
+    #[expect(dead_code, reason = "stub: called by validate() once implemented")]
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await resolver once implemented"
+    )]
     async fn verify_seal(
         _seal: &ArcSet,
         _all_sets: &[ArcSet],

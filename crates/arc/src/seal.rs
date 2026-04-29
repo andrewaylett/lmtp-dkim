@@ -56,7 +56,7 @@ use email_primitives::Message;
 use crate::Result;
 use crate::auth_results::AuthResultsValue;
 use crate::chain::ArcChainResult;
-use crate::headers::{ArcSet, AuthenticationResults};
+use crate::headers::ArcSet;
 
 /// Parameters for adding an ARC set to a message.
 #[derive(Debug)]
@@ -88,16 +88,23 @@ pub struct SealRequest {
 /// A single [`ArcSigner`] instance should be reused across messages so that
 /// the underlying key material is loaded only once.
 pub struct ArcSigner {
+    #[expect(dead_code, reason = "stub: used by seal() once implemented")]
     private_key: dkim::key::PrivateKey,
 }
 
 impl ArcSigner {
     /// Construct an [`ArcSigner`] from a private key.
-    pub fn new(key: dkim::key::PrivateKey) -> Self {
+    #[must_use]
+    pub const fn new(key: dkim::key::PrivateKey) -> Self {
         Self { private_key: key }
     }
 
     /// Load a private key from a PEM file and construct an [`ArcSigner`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::Dkim`] if the PEM file cannot be read or the
+    /// key is malformed.
     pub fn from_pem_file(path: &std::path::Path) -> Result<Self> {
         let _ = path;
         todo!("dkim::key::PrivateKey::from_pem_file(path).map(Self::new)")
@@ -115,6 +122,11 @@ impl ArcSigner {
     /// The `prior_chain_result` argument should be the output of
     /// [`crate::chain::ChainValidator::validate`] called on the received
     /// message.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::InstanceLimitExceeded`] if adding a new set
+    /// would set `i > 50` (RFC 8617 §5.1.1.3).
     pub fn seal(
         &self,
         message: &Message,
@@ -145,6 +157,7 @@ impl ArcSigner {
     ///
     /// The ordering within each `i` is: AAR, then AMS; seals are appended
     /// after all AAR/AMS pairs. The new seal with empty `b=` is last.
+    #[expect(dead_code, reason = "stub: called by seal() once implemented")]
     fn build_seal_hash_input(
         _existing_sets: &[ArcSet],
         _new_aar_header: &str,

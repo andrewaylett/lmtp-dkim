@@ -49,6 +49,10 @@ use std::sync::Arc as StdArc;
 
 use email_primitives::Message;
 use lmtp::session::{Envelope, MessageHandler, RecipientResult};
+#[expect(
+    unused_imports,
+    reason = "stub: tracing macros used when run() is implemented"
+)]
 use tracing::{error, info, warn};
 
 use crate::config::Config;
@@ -57,6 +61,10 @@ use crate::config::Config;
 ///
 /// Binds to the configured listen socket, creates the signing infrastructure,
 /// and serves connections.
+#[expect(
+    clippy::unused_async,
+    reason = "stub: will await server.serve_* once implemented"
+)]
 pub async fn run(config: Config) -> anyhow::Result<()> {
     let _ = config;
     todo!(
@@ -71,10 +79,15 @@ pub async fn run(config: Config) -> anyhow::Result<()> {
 
 /// LMTP [`MessageHandler`] for the inbound pipeline.
 #[derive(Clone)]
+#[expect(dead_code, reason = "stub: constructed in run() once implemented")]
 pub struct InboundHandler {
     inner: StdArc<InboundHandlerInner>,
 }
 
+#[expect(
+    dead_code,
+    reason = "stub: fields used by MessageHandler::handle once implemented"
+)]
 struct InboundHandlerInner {
     arc_signer: arc::ArcSigner,
     dkim_verifier: dkim::Verifier,
@@ -106,6 +119,10 @@ impl MessageHandler for InboundHandler {
 ///
 /// Initiates an LMTP session (sends LHLO, MAIL FROM, RCPT TO ×N, DATA)
 /// and collects per-recipient responses.
+#[expect(
+    dead_code,
+    reason = "stub: constructed in InboundHandlerInner once implemented"
+)]
 struct DownstreamClient {
     // connection pool or address config
 }
@@ -115,6 +132,14 @@ impl DownstreamClient {
     ///
     /// Returns one [`RecipientResult`] per entry in `envelope.recipients`,
     /// suitable for passing back to the upstream client.
+    #[expect(
+        dead_code,
+        reason = "stub: called by MessageHandler::handle once implemented"
+    )]
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await LMTP connection once implemented"
+    )]
     async fn deliver(
         &self,
         _envelope: &Envelope,

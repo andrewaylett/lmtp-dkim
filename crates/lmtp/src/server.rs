@@ -76,7 +76,8 @@ pub struct Server<H: MessageHandler + Clone + 'static> {
 
 impl<H: MessageHandler + Clone + 'static> Server<H> {
     /// Construct a new server with the given configuration and message handler.
-    pub fn new(config: ServerConfig, handler: H) -> Self {
+    #[must_use]
+    pub const fn new(config: ServerConfig, handler: H) -> Self {
         Self { config, handler }
     }
 
@@ -104,6 +105,10 @@ impl<H: MessageHandler + Clone + 'static> Server<H> {
     }
 
     /// Bind to a Unix domain socket and serve connections.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the Unix socket `accept` call fails.
     pub async fn serve_unix(self, listener: UnixListener) -> Result<()> {
         let config = Arc::new(self.config);
         info!("LMTP server listening (Unix socket)");
@@ -123,6 +128,10 @@ impl<H: MessageHandler + Clone + 'static> Server<H> {
     ///
     /// `S` must implement both `AsyncRead` and `AsyncWrite` (satisfied by
     /// `TcpStream` and `UnixStream`).
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will drive framed session once implemented"
+    )]
     async fn run_session<S>(_config: Arc<ServerConfig>, _handler: H, _stream: S) -> Result<()>
     where
         S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin + Send + 'static,
