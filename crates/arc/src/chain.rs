@@ -42,8 +42,8 @@
 
 use email_primitives::Message;
 
-use crate::headers::ArcSet;
 use crate::Result;
+use crate::headers::ArcSet;
 
 /// The result of validating an ARC chain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

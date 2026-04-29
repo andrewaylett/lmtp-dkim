@@ -34,8 +34,8 @@ use std::sync::Arc;
 use tokio::net::{TcpListener, UnixListener};
 use tracing::{error, info};
 
-use crate::session::MessageHandler;
 use crate::Result;
+use crate::session::MessageHandler;
 
 /// Configuration for the LMTP server.
 #[derive(Debug, Clone)]

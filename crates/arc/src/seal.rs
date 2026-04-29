@@ -53,10 +53,10 @@
 
 use email_primitives::Message;
 
+use crate::Result;
 use crate::auth_results::AuthResultsValue;
 use crate::chain::ArcChainResult;
 use crate::headers::{ArcSet, AuthenticationResults};
-use crate::Result;
 
 /// Parameters for adding an ARC set to a message.
 #[derive(Debug)]
