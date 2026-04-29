@@ -1,0 +1,19 @@
+[package]
+name        = "lmtp"
+description = "Async LMTP server implementation per RFC 2033"
+version.workspace    = true
+edition.workspace    = true
+license.workspace    = true
+repository.workspace = true
+
+[dependencies]
+email-primitives = { workspace = true }
+bytes            = { workspace = true }
+thiserror        = { workspace = true }
+tokio            = { workspace = true }
+tokio-util       = { workspace = true }
+tracing          = { workspace = true }
+winnow           = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,61 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/email-primitives",
+    "crates/lmtp",
+    "crates/dkim",
+    "crates/arc",
+    "crates/service",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/andrewaylett/lmtp-dkim"
+
+[workspace.dependencies]
+# Local crates
+email-primitives = { path = "crates/email-primitives" }
+lmtp              = { path = "crates/lmtp" }
+dkim              = { path = "crates/dkim" }
+arc               = { path = "crates/arc" }
+
+# Async runtime (tokio 1.x is the de-facto standard async runtime)
+tokio      = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7", features = ["codec"] }
+
+# Byte buffers
+bytes = "1"
+
+# Parsing (winnow is the modern successor to nom; zero-copy, combinator-based)
+winnow = "0.6"
+
+# Cryptography
+# ring provides RSA-PKCS1v15-SHA256 and Ed25519, the two DKIM algorithms
+# defined in RFC 6376 section 3.3 and RFC 8463.
+ring   = "0.17"
+base64 = "0.22"
+
+# DNS – used to look up DKIM public keys (_domainkey TXT records, RFC 6376 §3.6)
+# and for SPF/DMARC lookups in the service.
+hickory-resolver = "0.24"
+
+# Error handling
+thiserror = "2"
+
+# Structured, levelled logging
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+
+# Configuration and CLI (service crate only)
+serde = { version = "1", features = ["derive"] }
+toml  = "0.8"
+clap  = { version = "4", features = ["derive", "env"] }
+
+# Error propagation in binaries (not for libraries)
+anyhow = "1"
+
+[workspace.lints.rust]
+missing_docs    = "warn"
+unreachable_pub = "warn"
