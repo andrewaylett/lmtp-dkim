@@ -39,9 +39,9 @@
 
 use email_primitives::{Domain, Message};
 
+use crate::Result;
 use crate::key::PrivateKey;
 use crate::signature::{Canonicalization, DkimSignature};
-use crate::Result;
 
 /// Parameters for a DKIM signing operation.
 #[derive(Debug)]

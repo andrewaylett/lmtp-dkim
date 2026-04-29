@@ -28,7 +28,7 @@
 
 use email_primitives::Domain;
 
-use crate::{tag_list::TagList, Error, Result};
+use crate::{Error, Result, tag_list::TagList};
 
 /// The signing algorithm used in `a=`.
 ///

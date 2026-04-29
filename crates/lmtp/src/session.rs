@@ -24,7 +24,7 @@
 
 use email_primitives::{EmailAddress, Message, NullPath};
 
-use crate::{response::Reply, Result};
+use crate::{Result, response::Reply};
 
 /// The current state of an LMTP session.
 #[derive(Debug)]
