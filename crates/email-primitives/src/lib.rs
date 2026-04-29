@@ -43,8 +43,6 @@
 //! - [`header`]  – header field types, folding/unfolding, ordered collections
 //! - [`message`] – top-level [`Message`] type combining headers and body
 
-#![warn(missing_docs)]
-
 pub mod address;
 pub mod error;
 pub mod header;

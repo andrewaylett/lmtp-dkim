@@ -43,8 +43,6 @@
 //! lmtp-dkim --config /etc/lmtp-dkim/outbound.toml
 //! ```
 
-#![warn(missing_docs)]
-
 mod config;
 mod inbound;
 mod outbound;

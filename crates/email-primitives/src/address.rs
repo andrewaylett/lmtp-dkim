@@ -81,21 +81,24 @@ impl EmailAddress {
         let domain =
             Domain::parse(domain_str).map_err(|_| Error::InvalidAddress(input.to_owned()))?;
 
-        Ok(EmailAddress { local, domain })
+        Ok(Self { local, domain })
     }
 
     /// The local part (the portion to the left of `@`).
-    pub fn local(&self) -> &LocalPart {
+    #[must_use]
+    pub const fn local(&self) -> &LocalPart {
         &self.local
     }
 
     /// The domain (the portion to the right of `@`), normalised to lowercase.
-    pub fn domain(&self) -> &Domain {
+    #[must_use]
+    pub const fn domain(&self) -> &Domain {
         &self.domain
     }
 
     /// Borrow as a [`ReversePath`] for use in SMTP/LMTP `MAIL FROM`.
-    pub fn as_reverse_path(&self) -> ReversePath<'_> {
+    #[must_use]
+    pub const fn as_reverse_path(&self) -> ReversePath<'_> {
         ReversePath::Address(self)
     }
 }
@@ -107,7 +110,7 @@ impl std::fmt::Display for EmailAddress {
 }
 
 /// Returns true if `c` is an `atext` character per RFC 5322 §3.2.3.
-fn is_atext(c: char) -> bool {
+const fn is_atext(c: char) -> bool {
     matches!(
         c,
         'A'..='Z'
@@ -200,6 +203,7 @@ pub struct LocalPart(pub(crate) String);
 
 impl LocalPart {
     /// The raw string value, preserving original quoting.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -247,12 +251,13 @@ impl Domain {
             return Err(Error::InvalidDomain(input.to_owned()));
         }
         for label in input.split('.') {
-            validate_label(label).map_err(|_| Error::InvalidDomain(input.to_owned()))?;
+            validate_label(label).map_err(|()| Error::InvalidDomain(input.to_owned()))?;
         }
-        Ok(Domain(input.to_ascii_lowercase()))
+        Ok(Self(input.to_ascii_lowercase()))
     }
 
     /// The domain as a lowercase ASCII string, suitable for DNS queries.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
@@ -260,6 +265,7 @@ impl Domain {
     /// Construct the DKIM DNS query name for a given selector.
     ///
     /// Returns `<selector>._domainkey.<domain>` per RFC 6376 section 3.6.2.1.
+    #[must_use]
     pub fn dkim_txt_name(&self, selector: &str) -> String {
         format!("{}._domainkey.{}", selector, self.0)
     }
@@ -274,7 +280,8 @@ impl Domain {
     /// - `"example.com".is_parent_of("example.com")` → `true`
     /// - `"example.com".is_parent_of("sub.example.com")` → `true`
     /// - `"example.com".is_parent_of("other.com")` → `false`
-    pub fn is_parent_of(&self, other: &Domain) -> bool {
+    #[must_use]
+    pub fn is_parent_of(&self, other: &Self) -> bool {
         // Both are already lowercase, so direct comparison is correct.
         // The ".{self}" suffix check ensures we match at a label boundary,
         // preventing "ample.com" from being a parent of "example.com".
@@ -312,7 +319,7 @@ impl TryFrom<&str> for Domain {
     type Error = Error;
 
     fn try_from(s: &str) -> Result<Self> {
-        Domain::parse(s)
+        Self::parse(s)
     }
 }
 
@@ -332,8 +339,8 @@ pub enum ReversePath<'a> {
 impl std::fmt::Display for ReversePath<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ReversePath::Address(addr) => write!(f, "<{addr}>"),
-            ReversePath::Null => f.write_str("<>"),
+            Self::Address(addr) => write!(f, "<{addr}>"),
+            Self::Null => f.write_str("<>"),
         }
     }
 }
@@ -350,8 +357,8 @@ pub enum NullPath {
 impl std::fmt::Display for NullPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            NullPath::Address(addr) => write!(f, "<{addr}>"),
-            NullPath::Null => f.write_str("<>"),
+            Self::Address(addr) => write!(f, "<{addr}>"),
+            Self::Null => f.write_str("<>"),
         }
     }
 }
@@ -363,7 +370,7 @@ mod rfc5322_address {
     /// RFC 5322 §3.4.1: basic dot-atom addr-spec.
     #[test]
     fn parse_simple() {
-        let a = EmailAddress::parse("user@example.com").unwrap();
+        let a = EmailAddress::parse("user@example.com").expect("valid addr-spec");
         assert_eq!(a.local().as_str(), "user");
         assert_eq!(a.domain().as_str(), "example.com");
     }
@@ -371,7 +378,8 @@ mod rfc5322_address {
     /// RFC 5322 §3.4.1: quoted-string local part.
     #[test]
     fn parse_quoted_local() {
-        let a = EmailAddress::parse("\"user name\"@example.com").unwrap();
+        let a =
+            EmailAddress::parse("\"user name\"@example.com").expect("valid quoted-string local");
         assert_eq!(a.local().as_str(), "\"user name\"");
         assert_eq!(a.domain().as_str(), "example.com");
     }
@@ -379,30 +387,31 @@ mod rfc5322_address {
     /// RFC 5322 §3.4.1: quoted-pair inside quoted local part.
     #[test]
     fn parse_quoted_pair_local() {
-        let a = EmailAddress::parse("\"user\\\"quoted\"@example.com").unwrap();
+        let a =
+            EmailAddress::parse("\"user\\\"quoted\"@example.com").expect("valid quoted-pair local");
         assert!(a.local().as_str().starts_with('"'));
     }
 
     /// RFC 5321 §2.4: local-part case is preserved.
     #[test]
     fn local_case_preserved() {
-        let a = EmailAddress::parse("UserName@example.com").unwrap();
+        let a = EmailAddress::parse("UserName@example.com").expect("valid addr-spec");
         assert_eq!(a.local().as_str(), "UserName");
     }
 
     /// RFC 5322 §3.4.1: all allowed atext characters accepted.
     #[test]
     fn parse_atext_chars() {
-        EmailAddress::parse("user+filter@example.com").unwrap();
-        EmailAddress::parse("user.name@example.com").unwrap();
-        EmailAddress::parse("user_name@example.com").unwrap();
-        EmailAddress::parse("user-name@example.com").unwrap();
+        EmailAddress::parse("user+filter@example.com").expect("+ is atext");
+        EmailAddress::parse("user.name@example.com").expect(". in local is atext");
+        EmailAddress::parse("user_name@example.com").expect("_ is atext");
+        EmailAddress::parse("user-name@example.com").expect("- is atext");
     }
 
     /// Angle-bracket form is stripped.
     #[test]
     fn parse_angle_bracket_form() {
-        let a = EmailAddress::parse("<user@example.com>").unwrap();
+        let a = EmailAddress::parse("<user@example.com>").expect("angle-bracket form");
         assert_eq!(a.local().as_str(), "user");
         assert_eq!(a.domain().as_str(), "example.com");
     }
@@ -410,7 +419,7 @@ mod rfc5322_address {
     /// Whitespace around address is stripped.
     #[test]
     fn parse_whitespace_stripped() {
-        let a = EmailAddress::parse("  user@example.com  ").unwrap();
+        let a = EmailAddress::parse("  user@example.com  ").expect("whitespace-padded addr");
         assert_eq!(a.local().as_str(), "user");
     }
 
@@ -447,7 +456,7 @@ mod rfc5322_address {
     /// Display renders as `local@domain`.
     #[test]
     fn display() {
-        let a = EmailAddress::parse("user@example.com").unwrap();
+        let a = EmailAddress::parse("user@example.com").expect("valid addr-spec");
         assert_eq!(a.to_string(), "user@example.com");
     }
 }
@@ -459,34 +468,34 @@ mod rfc5321_domain {
     /// RFC 5321 §2.3.5 + RFC 1123 §2.1: basic domain parse.
     #[test]
     fn parse_simple() {
-        let d = Domain::parse("example.com").unwrap();
+        let d = Domain::parse("example.com").expect("valid domain");
         assert_eq!(d.as_str(), "example.com");
     }
 
     /// RFC 5321 §2.3.5: domain normalised to lowercase.
     #[test]
     fn parse_uppercase_lowercased() {
-        let d = Domain::parse("EXAMPLE.COM").unwrap();
+        let d = Domain::parse("EXAMPLE.COM").expect("valid domain");
         assert_eq!(d.as_str(), "example.com");
     }
 
     /// RFC 5321 §2.3.5: domain address case insensitivity applies to email.
     #[test]
     fn email_domain_lowercased() {
-        let a = EmailAddress::parse("user@EXAMPLE.COM").unwrap();
+        let a = EmailAddress::parse("user@EXAMPLE.COM").expect("valid addr-spec");
         assert_eq!(a.domain().as_str(), "example.com");
     }
 
     /// RFC 1123 §2.1: label may start with digit (relaxation of RFC 952).
     #[test]
     fn label_starts_with_digit() {
-        Domain::parse("3com.example.com").unwrap();
+        Domain::parse("3com.example.com").expect("digit-leading label is valid");
     }
 
     /// Single-label domain accepted (e.g. `localhost`).
     #[test]
     fn single_label() {
-        let d = Domain::parse("localhost").unwrap();
+        let d = Domain::parse("localhost").expect("single-label domain");
         assert_eq!(d.as_str(), "localhost");
     }
 
@@ -494,7 +503,7 @@ mod rfc5321_domain {
     #[test]
     fn reject_label_too_long() {
         let long_label = "a".repeat(64);
-        assert!(Domain::parse(&format!("{}.com", long_label)).is_err());
+        assert!(Domain::parse(&format!("{long_label}.com")).is_err());
     }
 
     /// RFC 1123 §2.1: label cannot start with hyphen.
@@ -527,10 +536,10 @@ mod rfc5321_domain {
         assert!(Domain::parse("example..com").is_err());
     }
 
-    /// RFC 6376 §3.6.2.1: dkim_txt_name constructs correct DNS query name.
+    /// RFC 6376 §3.6.2.1: `dkim_txt_name` constructs correct DNS query name.
     #[test]
     fn dkim_txt_name() {
-        let d = Domain::parse("example.com").unwrap();
+        let d = Domain::parse("example.com").expect("valid domain");
         assert_eq!(
             d.dkim_txt_name("selector"),
             "selector._domainkey.example.com"
@@ -540,33 +549,33 @@ mod rfc5321_domain {
     /// RFC 6376 §6.1.1 step 8: exact match is parent of itself.
     #[test]
     fn is_parent_of_self() {
-        let d = Domain::parse("example.com").unwrap();
+        let d = Domain::parse("example.com").expect("valid domain");
         assert!(d.is_parent_of(&d.clone()));
     }
 
     /// RFC 6376 §6.1.1 step 8: parent of a subdomain.
     #[test]
     fn is_parent_of_sub() {
-        let parent = Domain::parse("example.com").unwrap();
-        let child = Domain::parse("sub.example.com").unwrap();
+        let parent = Domain::parse("example.com").expect("valid domain");
+        let child = Domain::parse("sub.example.com").expect("valid domain");
         assert!(parent.is_parent_of(&child));
     }
 
     /// RFC 6376 §6.1.1 step 8: unrelated domain is not a parent.
     #[test]
     fn not_parent_of_unrelated() {
-        let d1 = Domain::parse("example.com").unwrap();
-        let d2 = Domain::parse("notexample.com").unwrap();
+        let d1 = Domain::parse("example.com").expect("valid domain");
+        let d2 = Domain::parse("notexample.com").expect("valid domain");
         assert!(!d1.is_parent_of(&d2));
     }
 
     /// RFC 6376 §6.1.1 step 8: suffix match must be at a label boundary.
     ///
-    /// "ample.com" must NOT be a parent of "example.com".
+    /// `"ample.com"` must NOT be a parent of `"example.com"`.
     #[test]
     fn not_parent_of_partial_label() {
-        let partial = Domain::parse("ample.com").unwrap();
-        let full = Domain::parse("example.com").unwrap();
+        let partial = Domain::parse("ample.com").expect("valid domain");
+        let full = Domain::parse("example.com").expect("valid domain");
         assert!(!partial.is_parent_of(&full));
     }
 }

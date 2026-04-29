@@ -79,31 +79,34 @@ pub struct AuthResultProperty {
 
 impl AuthResultsValue {
     /// Parse one method result clause from a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::HeaderParse`] if the clause is malformed.
     pub fn parse(_clause: &str) -> crate::Result<Self> {
         todo!(
             "split on first '='; method name before '=', rest is result + properties; \
              extract optional 'reason=...' and 'ptype.property=value' triples"
         )
     }
+}
 
-    /// Serialise the result clause to a string.
-    pub fn to_string(&self) -> String {
-        let mut out = format!("{}={}", self.method, self.result);
+impl std::fmt::Display for AuthResultsValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}={}", self.method, self.result)?;
         if let Some(reason) = &self.reason {
-            out.push_str(&format!(" reason={reason:?}"));
+            write!(f, " reason={reason:?}")?;
         }
         for prop in &self.properties {
-            out.push_str(&format!(
-                "\n    {}.{}={}",
-                prop.ptype, prop.property, prop.value
-            ));
+            write!(f, "\n    {}.{}={}", prop.ptype, prop.property, prop.value)?;
         }
-        out
+        Ok(())
     }
 }
 
 impl AuthResultProperty {
     /// Construct a `header.d=<domain>` property (used in DKIM results).
+    #[must_use]
     pub fn header_d(domain: &email_primitives::Domain) -> Self {
         Self {
             ptype: "header".to_owned(),
@@ -113,6 +116,7 @@ impl AuthResultProperty {
     }
 
     /// Construct a `header.s=<selector>` property (used in DKIM results).
+    #[must_use]
     pub fn header_s(selector: &str) -> Self {
         Self {
             ptype: "header".to_owned(),
@@ -122,6 +126,7 @@ impl AuthResultProperty {
     }
 
     /// Construct a `header.i=<auid>` property (used in DKIM results).
+    #[must_use]
     pub fn header_i(auid: &str) -> Self {
         Self {
             ptype: "header".to_owned(),
@@ -131,6 +136,7 @@ impl AuthResultProperty {
     }
 
     /// Construct a `smtp.mailfrom=<addr>` property (used in SPF results).
+    #[must_use]
     pub fn smtp_mailfrom(addr: &str) -> Self {
         Self {
             ptype: "smtp".to_owned(),
@@ -143,6 +149,7 @@ impl AuthResultProperty {
     ///
     /// Records the oldest instance number that contributed to a `pass` result
     /// (RFC 8617 §7.1).
+    #[must_use]
     pub fn arc_oldest_pass(instance: u32) -> Self {
         Self {
             ptype: "header".to_owned(),

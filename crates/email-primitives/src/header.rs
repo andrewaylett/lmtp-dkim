@@ -12,9 +12,9 @@
 //!
 //! # Folding and unfolding
 //!
-//! Long header values may be "folded" across multiple lines. A fold is a CRLF
+//! Long header values may be "folded" across multiple lines. A fold is a `CRLF`
 //! followed by at least one WSP (SP or HTAB) character. Unfolding reverses
-//! this by removing the CRLF before each WSP (RFC 5322 section 2.2.3).
+//! this by removing the `CRLF` before each WSP (RFC 5322 section 2.2.3).
 //!
 //! DKIM and ARC both work on **unfolded** header values when canonicalising,
 //! then re-add their own folding in the generated signature headers.
@@ -47,6 +47,11 @@ pub struct HeaderName(pub(crate) String);
 impl HeaderName {
     /// Construct a header name, validating that it contains only printable
     /// ASCII characters other than `:` (RFC 5322 section 2.2 `ftext`).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidHeaderName`] if the name is empty, contains
+    /// characters outside printable US-ASCII (33–126), or contains a colon.
     pub fn new(name: impl Into<String>) -> Result<Self> {
         let s: String = name.into();
         if s.is_empty() {
@@ -58,16 +63,18 @@ impl HeaderName {
                 return Err(Error::InvalidHeaderName(s));
             }
         }
-        Ok(HeaderName(s))
+        Ok(Self(s))
     }
 
     /// The field name in its original casing.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
     /// The field name lowercased, for case-insensitive comparisons and DKIM
     /// relaxed canonicalization.
+    #[must_use]
     pub fn to_lowercase(&self) -> String {
         self.0.to_ascii_lowercase()
     }
@@ -95,7 +102,7 @@ impl std::fmt::Display for HeaderName {
 
 /// The value portion of a header field.
 ///
-/// Stored with its original folding intact (CRLF WSP sequences). Use
+/// Stored with its original folding intact (`CRLF` WSP sequences). Use
 /// [`HeaderValue::unfold`] to obtain a single logical line. The leading space
 /// after the colon is included in the stored value to preserve round-trip
 /// fidelity.
@@ -103,7 +110,7 @@ impl std::fmt::Display for HeaderName {
 /// # DKIM note
 ///
 /// When DKIM signs or verifies a header, the full `name: value` line (with
-/// trailing CRLF but **without** the terminating CRLF of the DKIM-Signature
+/// trailing `CRLF` but **without** the terminating `CRLF` of the DKIM-Signature
 /// itself) is included in the hash input. See RFC 6376 section 3.4.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct HeaderValue(pub(crate) String);
@@ -111,8 +118,13 @@ pub struct HeaderValue(pub(crate) String);
 impl HeaderValue {
     /// Construct a header value from a raw string.
     ///
-    /// The value must not contain bare CR or LF outside of CRLF-WSP folding
+    /// The value must not contain bare CR or LF outside of `CRLF`-WSP folding
     /// sequences (RFC 5322 section 2.2).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::InvalidHeaderValue`] if the value contains bare CR or
+    /// LF outside of `CRLF`-WSP folding sequences.
     pub fn new(value: impl Into<String>) -> Result<Self> {
         let s: String = value.into();
         let bytes = s.as_bytes();
@@ -136,19 +148,21 @@ impl HeaderValue {
                 _ => i += 1,
             }
         }
-        Ok(HeaderValue(s))
+        Ok(Self(s))
     }
 
     /// The value with original folding preserved.
+    #[must_use]
     pub fn as_str(&self) -> &str {
         &self.0
     }
 
-    /// Unfold the value by removing CRLF sequences that are followed by WSP
+    /// Unfold the value by removing `CRLF` sequences that are followed by WSP
     /// (RFC 5322 section 2.2.3).
     ///
     /// The result is a single logical line with all inter-line whitespace
     /// collapsed to single spaces.
+    #[must_use]
     pub fn unfold(&self) -> String {
         // RFC 5322 §2.2.3: "remove any CRLF that is immediately followed by WSP".
         // Removing "\r\n" leaves the WSP character in place, which is correct.
@@ -179,15 +193,22 @@ pub struct Header {
 
 impl Header {
     /// Construct a header from a name and value.
-    pub fn new(name: HeaderName, value: HeaderValue) -> Self {
+    #[must_use]
+    pub const fn new(name: HeaderName, value: HeaderValue) -> Self {
         Self { name, value }
     }
 
     /// Parse a single header field line (or folded multiline header) from a
     /// byte slice.
     ///
-    /// The input should include the terminating CRLF of the final line but
+    /// The input should include the terminating `CRLF` of the final line but
     /// must NOT include the blank line that separates headers from the body.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::MalformedMessage`] if the input has no `:` separator or
+    /// contains non-UTF-8 bytes. Returns [`Error::InvalidHeaderName`] or
+    /// [`Error::InvalidHeaderValue`] for structurally invalid fields.
     pub fn parse(input: &[u8]) -> Result<Self> {
         // Find the first ':' to split name from value.
         let colon =
@@ -213,12 +234,13 @@ impl Header {
         let value_str = value_str.strip_suffix("\r\n").unwrap_or(value_str);
         let value = HeaderValue::new(value_str)?;
 
-        Ok(Header { name, value })
+        Ok(Self { name, value })
     }
 
     /// Render the header to its wire form: `{name}:{value}\r\n`.
     ///
-    /// Consumers should not add an extra CRLF; the trailing CRLF is included.
+    /// Consumers should not add an extra `CRLF`; the trailing `CRLF` is included.
+    #[must_use]
     pub fn to_wire(&self) -> String {
         format!("{}:{}\r\n", self.name, self.value)
     }
@@ -245,6 +267,7 @@ pub struct Headers(Vec<Header>);
 
 impl Headers {
     /// Construct an empty header list.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -270,6 +293,7 @@ impl Headers {
     ///
     /// "Last" means the bottommost occurrence in the header section, which is
     /// the canonical value for most singular header fields.
+    #[must_use]
     pub fn get_last(&self, name: &HeaderName) -> Option<&Header> {
         self.0.iter().rev().find(|h| &h.name == name)
     }
@@ -285,7 +309,7 @@ impl Headers {
     /// Returns [`Error::MalformedMessage`] if the header section is
     /// syntactically invalid.
     pub fn parse(input: &[u8]) -> Result<(Self, &[u8])> {
-        let mut headers = Headers::new();
+        let mut headers = Self::new();
         let mut pos = 0;
 
         loop {
@@ -308,20 +332,22 @@ impl Headers {
     }
 
     /// Return the number of header fields.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.0.len()
     }
 
     /// Return `true` if there are no header fields.
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 }
 
 /// Find the byte index of the end of the current header field (including the
-/// terminating CRLF), scanning forward from `start`.
+/// terminating `CRLF`), scanning forward from `start`.
 ///
-/// Continuation lines (lines beginning with WSP after a CRLF) are included
+/// Continuation lines (lines beginning with WSP after a `CRLF`) are included
 /// in the returned range per RFC 5322 §2.2.3 folding rules.
 fn find_header_end(input: &[u8], start: usize) -> Result<usize> {
     let mut pos = start;
@@ -337,7 +363,7 @@ fn find_header_end(input: &[u8], start: usize) -> Result<usize> {
 
         // If the next byte is WSP this is a fold; include the continuation.
         match input.get(pos) {
-            Some(&b' ') | Some(&b'\t') => continue,
+            Some(&b' ' | &b'\t') => {}
             _ => return Ok(pos),
         }
     }
@@ -350,10 +376,10 @@ mod rfc5322_header_name {
     /// RFC 5322 §2.2: valid ftext characters (33-126 except ':').
     #[test]
     fn valid_names() {
-        HeaderName::new("Subject").unwrap();
-        HeaderName::new("DKIM-Signature").unwrap();
-        HeaderName::new("X-Custom-Header").unwrap();
-        HeaderName::new("From").unwrap();
+        HeaderName::new("Subject").expect("Subject is a valid header name");
+        HeaderName::new("DKIM-Signature").expect("DKIM-Signature is a valid header name");
+        HeaderName::new("X-Custom-Header").expect("X-Custom-Header is a valid header name");
+        HeaderName::new("From").expect("From is a valid header name");
     }
 
     /// RFC 5322 §2.2: colon is not allowed in field name.
@@ -383,15 +409,15 @@ mod rfc5322_header_name {
     /// RFC 5322 §2.2: field names are case-insensitive.
     #[test]
     fn case_insensitive_eq() {
-        let a = HeaderName::new("Subject").unwrap();
-        let b = HeaderName::new("SUBJECT").unwrap();
+        let a = HeaderName::new("Subject").expect("valid header name");
+        let b = HeaderName::new("SUBJECT").expect("valid header name");
         assert_eq!(a, b);
     }
 
-    /// RFC 6376 §3.4.2: to_lowercase() for relaxed canonicalization.
+    /// RFC 6376 §3.4.2: `to_lowercase()` for relaxed canonicalization.
     #[test]
     fn to_lowercase() {
-        let n = HeaderName::new("DKIM-Signature").unwrap();
+        let n = HeaderName::new("DKIM-Signature").expect("valid header name");
         assert_eq!(n.to_lowercase(), "dkim-signature");
     }
 }
@@ -403,19 +429,19 @@ mod rfc5322_header_value {
     /// RFC 5322 §2.2: a simple ASCII value is accepted.
     #[test]
     fn valid_simple() {
-        HeaderValue::new(" Hello, world!").unwrap();
+        HeaderValue::new(" Hello, world!").expect("simple ASCII value");
     }
 
-    /// RFC 5322 §2.2.3: CRLF followed by SP is a valid fold.
+    /// RFC 5322 §2.2.3: `CRLF` followed by SP is a valid fold.
     #[test]
     fn valid_fold_sp() {
-        HeaderValue::new(" value\r\n continued").unwrap();
+        HeaderValue::new(" value\r\n continued").expect("CRLF+SP fold");
     }
 
-    /// RFC 5322 §2.2.3: CRLF followed by HTAB is a valid fold.
+    /// RFC 5322 §2.2.3: `CRLF` followed by HTAB is a valid fold.
     #[test]
     fn valid_fold_htab() {
-        HeaderValue::new(" value\r\n\tcontinued").unwrap();
+        HeaderValue::new(" value\r\n\tcontinued").expect("CRLF+HTAB fold");
     }
 
     /// RFC 5322 §2.2: bare CR is not allowed.
@@ -430,30 +456,30 @@ mod rfc5322_header_value {
         assert!(HeaderValue::new(" val\nue").is_err());
     }
 
-    /// RFC 5322 §2.2: CRLF not followed by WSP is rejected.
+    /// RFC 5322 §2.2: `CRLF` not followed by WSP is rejected.
     #[test]
     fn reject_crlf_without_wsp() {
         assert!(HeaderValue::new(" val\r\nue").is_err());
     }
 
-    /// RFC 5322 §2.2.3: unfold removes CRLF before SP, keeping the SP.
+    /// RFC 5322 §2.2.3: unfold removes `CRLF` before SP, keeping the SP.
     #[test]
     fn unfold_sp() {
-        let v = HeaderValue::new(" value\r\n continued").unwrap();
+        let v = HeaderValue::new(" value\r\n continued").expect("CRLF+SP fold");
         assert_eq!(v.unfold(), " value continued");
     }
 
-    /// RFC 5322 §2.2.3: unfold removes CRLF before HTAB, keeping the HTAB.
+    /// RFC 5322 §2.2.3: unfold removes `CRLF` before HTAB, keeping the HTAB.
     #[test]
     fn unfold_htab() {
-        let v = HeaderValue::new(" value\r\n\tcontinued").unwrap();
+        let v = HeaderValue::new(" value\r\n\tcontinued").expect("CRLF+HTAB fold");
         assert_eq!(v.unfold(), " value\tcontinued");
     }
 
     /// RFC 5322 §2.2.3: multiple folds are all removed.
     #[test]
     fn unfold_multiple() {
-        let v = HeaderValue::new(" a\r\n b\r\n c").unwrap();
+        let v = HeaderValue::new(" a\r\n b\r\n c").expect("multiple folds");
         assert_eq!(v.unfold(), " a b c");
     }
 }
@@ -465,7 +491,7 @@ mod rfc5322_header_parse {
     /// RFC 5322 §2.2: parse a simple non-folded header field.
     #[test]
     fn parse_simple() {
-        let h = Header::parse(b"Subject: Hello\r\n").unwrap();
+        let h = Header::parse(b"Subject: Hello\r\n").expect("simple header");
         assert_eq!(h.name.as_str(), "Subject");
         assert_eq!(h.value.as_str(), " Hello");
     }
@@ -473,7 +499,7 @@ mod rfc5322_header_parse {
     /// RFC 5322 §2.2.3: parse a folded header field preserving the fold.
     #[test]
     fn parse_folded() {
-        let h = Header::parse(b"Subject: Hello\r\n world\r\n").unwrap();
+        let h = Header::parse(b"Subject: Hello\r\n world\r\n").expect("folded header");
         assert_eq!(h.name.as_str(), "Subject");
         assert!(h.value.as_str().contains("\r\n"));
         assert_eq!(h.value.unfold(), " Hello world");
@@ -483,14 +509,14 @@ mod rfc5322_header_parse {
     #[test]
     fn wire_round_trip() {
         let original = "Subject: Hello\r\n";
-        let h = Header::parse(original.as_bytes()).unwrap();
+        let h = Header::parse(original.as_bytes()).expect("valid header");
         assert_eq!(h.to_wire(), original);
     }
 
     /// RFC 5322 §2.2: leading space after colon is part of value.
     #[test]
     fn leading_space_in_value() {
-        let h = Header::parse(b"From: alice@example.com\r\n").unwrap();
+        let h = Header::parse(b"From: alice@example.com\r\n").expect("From header");
         assert_eq!(h.value.as_str(), " alice@example.com");
     }
 }
@@ -499,11 +525,11 @@ mod rfc5322_header_parse {
 mod rfc5322_headers_parse {
     use super::*;
 
-    /// RFC 5322 §2.1: headers section terminated by blank line (CRLF CRLF).
+    /// RFC 5322 §2.1: headers section terminated by blank line (`CRLF CRLF`).
     #[test]
     fn parse_basic() {
         let input = b"From: alice@example.com\r\nTo: bob@example.com\r\n\r\nBody here";
-        let (headers, body) = Headers::parse(input).unwrap();
+        let (headers, body) = Headers::parse(input).expect("basic headers");
         assert_eq!(headers.len(), 2);
         assert_eq!(body, b"Body here");
     }
@@ -512,7 +538,7 @@ mod rfc5322_headers_parse {
     #[test]
     fn parse_empty_headers() {
         let input = b"\r\nBody";
-        let (headers, body) = Headers::parse(input).unwrap();
+        let (headers, body) = Headers::parse(input).expect("empty header section");
         assert_eq!(headers.len(), 0);
         assert_eq!(body, b"Body");
     }
@@ -521,28 +547,31 @@ mod rfc5322_headers_parse {
     #[test]
     fn parse_folded_header() {
         let input = b"Subject: Hello\r\n world\r\n\r\n";
-        let (headers, _) = Headers::parse(input).unwrap();
+        let (headers, _) = Headers::parse(input).expect("folded header section");
         assert_eq!(headers.len(), 1);
-        assert_eq!(headers.iter().next().unwrap().name.as_str(), "Subject");
+        assert_eq!(
+            headers.iter().next().expect("one header").name.as_str(),
+            "Subject"
+        );
     }
 
     /// RFC 6376 §5.4.2: insertion order is preserved (top to bottom).
     #[test]
     fn insertion_order_preserved() {
         let input = b"From: a\r\nReceived: x\r\nReceived: y\r\n\r\n";
-        let (headers, _) = Headers::parse(input).unwrap();
-        let name = HeaderName::new("Received").unwrap();
+        let (headers, _) = Headers::parse(input).expect("headers with duplicates");
+        let name = HeaderName::new("Received").expect("valid header name");
         let received: Vec<_> = headers.get_all(&name).map(|h| h.value.as_str()).collect();
         assert_eq!(received, [" x", " y"]);
     }
 
-    /// RFC 6376 §5.4.2: get_last returns the bottommost occurrence.
+    /// RFC 6376 §5.4.2: `get_last` returns the bottommost occurrence.
     #[test]
     fn get_last_bottommost() {
         let input = b"From: first\r\nFrom: second\r\n\r\n";
-        let (headers, _) = Headers::parse(input).unwrap();
-        let name = HeaderName::new("From").unwrap();
-        let last = headers.get_last(&name).unwrap();
+        let (headers, _) = Headers::parse(input).expect("duplicate From headers");
+        let name = HeaderName::new("From").expect("valid header name");
+        let last = headers.get_last(&name).expect("at least one From header");
         assert_eq!(last.value.as_str(), " second");
     }
 
@@ -557,7 +586,7 @@ mod rfc5322_headers_parse {
     #[test]
     fn body_returned_correctly() {
         let input = b"From: a\r\n\r\nHello\r\nWorld\r\n";
-        let (_, body) = Headers::parse(input).unwrap();
+        let (_, body) = Headers::parse(input).expect("valid headers");
         assert_eq!(body, b"Hello\r\nWorld\r\n");
     }
 }

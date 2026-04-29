@@ -65,8 +65,6 @@
 //! - [`session`] – session state machine.
 //! - [`server`]  – TCP/Unix-socket listener that spawns sessions.
 
-#![warn(missing_docs)]
-
 pub mod codec;
 pub mod command;
 pub mod response;

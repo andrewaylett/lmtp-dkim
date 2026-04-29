@@ -123,14 +123,14 @@ impl Command {
 impl std::fmt::Display for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Command::Lhlo { client_domain } => write!(f, "LHLO {client_domain}"),
-            Command::Mail { from, .. } => write!(f, "MAIL FROM:{from}"),
-            Command::Rcpt { to, .. } => write!(f, "RCPT TO:<{to}>"),
-            Command::Data => f.write_str("DATA"),
-            Command::Rset => f.write_str("RSET"),
-            Command::Noop => f.write_str("NOOP"),
-            Command::Vrfy { query } => write!(f, "VRFY {query}"),
-            Command::Quit => f.write_str("QUIT"),
+            Self::Lhlo { client_domain } => write!(f, "LHLO {client_domain}"),
+            Self::Mail { from, .. } => write!(f, "MAIL FROM:{from}"),
+            Self::Rcpt { to, .. } => write!(f, "RCPT TO:<{to}>"),
+            Self::Data => f.write_str("DATA"),
+            Self::Rset => f.write_str("RSET"),
+            Self::Noop => f.write_str("NOOP"),
+            Self::Vrfy { query } => write!(f, "VRFY {query}"),
+            Self::Quit => f.write_str("QUIT"),
         }
     }
 }

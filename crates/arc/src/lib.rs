@@ -70,8 +70,6 @@
 //! - [`chain`] – chain validation logic.
 //! - [`seal`] – signing: construct and add an ARC set.
 
-#![warn(missing_docs)]
-
 pub mod auth_results;
 pub mod chain;
 pub mod headers;

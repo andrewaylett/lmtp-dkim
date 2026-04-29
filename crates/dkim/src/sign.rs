@@ -41,7 +41,12 @@ use email_primitives::{Domain, Message};
 
 use crate::Result;
 use crate::key::PrivateKey;
-use crate::signature::{Canonicalization, DkimSignature};
+use crate::signature::Canonicalization;
+#[expect(
+    unused_imports,
+    reason = "stub: DkimSignature used when sign() is implemented"
+)]
+use crate::signature::DkimSignature;
 
 /// Parameters for a DKIM signing operation.
 #[derive(Debug)]
@@ -75,6 +80,7 @@ impl SignRequest {
     ///
     /// Default header list covers the fields recommended by RFC 6376 §5.4.1
     /// plus "over-signing" of `From:` and `To:`.
+    #[must_use]
     pub fn new(domain: Domain, selector: impl Into<String>) -> Self {
         Self {
             domain,
@@ -106,13 +112,16 @@ impl SignRequest {
 /// Create one [`Signer`] per domain/selector/key combination. The signer is
 /// cheaply cloneable and safe to share across threads (`Arc<Signer>`).
 pub struct Signer {
+    #[expect(dead_code, reason = "stub: used by sign() once implemented")]
     private_key: PrivateKey,
+    #[expect(dead_code, reason = "stub: used by sign() once implemented")]
     default_request: SignRequest,
 }
 
 impl Signer {
     /// Construct a signer.
-    pub fn new(key: PrivateKey, default_request: SignRequest) -> Self {
+    #[must_use]
+    pub const fn new(key: PrivateKey, default_request: SignRequest) -> Self {
         Self {
             private_key: key,
             default_request,
@@ -141,6 +150,11 @@ impl Signer {
     }
 
     /// Sign a message with a custom [`SignRequest`], overriding the default.
+    ///
+    /// # Errors
+    ///
+    /// - If the message has no `From:` header.
+    /// - If the private key signing operation fails.
     pub fn sign_with(&self, message: &Message, request: &SignRequest) -> Result<Message> {
         let _ = (message, request);
         todo!("same as sign() but using `request` instead of `self.default_request`")

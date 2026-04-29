@@ -63,6 +63,10 @@ pub enum ChainValidation {
 
 impl ChainValidation {
     /// Parse the `cv=` tag value.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::HeaderParse`] for unknown `cv=` values.
     pub fn parse(s: &str) -> Result<Self> {
         match s {
             "none" => Ok(Self::None),
@@ -73,7 +77,8 @@ impl ChainValidation {
     }
 
     /// The wire representation.
-    pub fn as_str(self) -> &'static str {
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
         match self {
             Self::None => "none",
             Self::Pass => "pass",
@@ -85,9 +90,9 @@ impl ChainValidation {
 impl From<ArcChainResult> for ChainValidation {
     fn from(r: ArcChainResult) -> Self {
         match r {
-            ArcChainResult::None => ChainValidation::None,
-            ArcChainResult::Pass => ChainValidation::Pass,
-            ArcChainResult::Fail => ChainValidation::Fail,
+            ArcChainResult::None => Self::None,
+            ArcChainResult::Pass => Self::Pass,
+            ArcChainResult::Fail => Self::Fail,
         }
     }
 }
@@ -105,6 +110,10 @@ pub struct AuthenticationResults {
 
 impl AuthenticationResults {
     /// Parse from the header field value (after the colon).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::HeaderParse`] if the value is malformed.
     pub fn parse(_value: &str) -> Result<Self> {
         todo!(
             "parse 'i=<n>;' prefix; then authserv-id; \
@@ -113,6 +122,7 @@ impl AuthenticationResults {
     }
 
     /// Serialise to a header value string (without the `ARC-Authentication-Results:` prefix).
+    #[must_use]
     pub fn to_header_value(&self) -> String {
         todo!("i=<n>; <authserv-id>; <results joined by '; '>")
     }
@@ -134,6 +144,11 @@ pub struct ArcMessageSignature {
 
 impl ArcMessageSignature {
     /// Parse from the header field value.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::HeaderParse`] if `i=` is missing or invalid, or if
+    /// the embedded DKIM-Signature is malformed.
     pub fn parse(_value: &str) -> Result<Self> {
         todo!(
             "extract 'i=<n>;' prefix; pass remainder to DkimSignature::parse; \
@@ -142,6 +157,7 @@ impl ArcMessageSignature {
     }
 
     /// Serialise to a header value string.
+    #[must_use]
     pub fn to_header_value(&self) -> String {
         todo!("'i=<n>; ' + inner.to_tag_list()")
     }
@@ -168,6 +184,10 @@ pub struct ArcSeal {
 
 impl ArcSeal {
     /// Parse from the header field value.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::HeaderParse`] if required tags are absent or malformed.
     pub fn parse(_value: &str) -> Result<Self> {
         todo!(
             "TagList::parse; extract i, a, cv, d, s, t, b; \
@@ -176,11 +196,13 @@ impl ArcSeal {
     }
 
     /// Serialise to a header value string (with the actual signature).
+    #[must_use]
     pub fn to_header_value(&self) -> String {
         todo!("emit all tags in canonical order; base64-encode b; fold long lines")
     }
 
     /// Serialise with `b=` empty, for use as signing input.
+    #[must_use]
     pub fn to_signing_input(&self) -> String {
         todo!("same as to_header_value but with b= empty")
     }
@@ -205,7 +227,9 @@ pub struct ArcSet {
 impl ArcSet {
     /// Validate that all three headers have the same `i=` value.
     ///
-    /// Returns an error if the instance numbers are inconsistent.
+    /// # Errors
+    ///
+    /// Returns [`Error::HeaderParse`] if the instance numbers are inconsistent.
     pub fn validate_instance_consistency(&self) -> Result<()> {
         todo!(
             "check self.auth_results.instance == self.message_signature.instance \

@@ -35,7 +35,15 @@
 use email_primitives::Message;
 
 use crate::dns::DkimResolver;
+#[expect(
+    unused_imports,
+    reason = "stub: DkimSignature used when verify() is implemented"
+)]
 use crate::signature::DkimSignature;
+#[expect(
+    unused_imports,
+    reason = "stub: Error and Result used when verify() is implemented"
+)]
 use crate::{Error, Result};
 
 /// The outcome of verifying a single `DKIM-Signature`.
@@ -81,7 +89,8 @@ pub struct VerificationResult {
 
 impl VerificationResult {
     /// Construct a `none` result (no DKIM-Signature present).
-    pub fn none() -> Self {
+    #[must_use]
+    pub const fn none() -> Self {
         Self {
             status: VerificationStatus::None,
             domain: None,
@@ -97,6 +106,7 @@ impl VerificationResult {
     /// ```text
     /// dkim=pass header.d=example.com header.s=selector header.i=@example.com
     /// ```
+    #[must_use]
     pub fn to_auth_results_value(&self) -> String {
         todo!(
             "format 'dkim=<status>'; \
@@ -110,12 +120,14 @@ impl VerificationResult {
 
 /// Verifies `DKIM-Signature` headers in a message.
 pub struct Verifier {
+    #[expect(dead_code, reason = "stub: used by verify() once implemented")]
     resolver: DkimResolver,
 }
 
 impl Verifier {
     /// Construct a verifier using the provided DNS resolver.
-    pub fn new(resolver: DkimResolver) -> Self {
+    #[must_use]
+    pub const fn new(resolver: DkimResolver) -> Self {
         Self { resolver }
     }
 
@@ -126,6 +138,10 @@ impl Verifier {
     ///
     /// If the message contains no `DKIM-Signature` headers, returns a
     /// single-element vec containing [`VerificationResult::none()`].
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await DNS resolver once implemented"
+    )]
     pub async fn verify(&self, message: &Message) -> Vec<VerificationResult> {
         let _ = message;
         todo!(
@@ -143,6 +159,7 @@ impl Verifier {
     ///
     /// Preference: `pass` > `neutral` > `fail` > `permerror` > `temperror`
     /// > `none`.
+    #[must_use]
     pub fn best_result(results: &[VerificationResult]) -> &VerificationResult {
         let _ = results;
         todo!("iterate and pick highest-precedence status")

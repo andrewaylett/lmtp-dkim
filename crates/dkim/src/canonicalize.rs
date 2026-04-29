@@ -49,7 +49,7 @@
 
 use email_primitives::{Header, Headers};
 
-use crate::signature::{Canonicalization, CanonicalizationAlgorithm};
+use crate::signature::CanonicalizationAlgorithm;
 
 /// Canonicalize a header field for inclusion in the signing hash.
 ///
@@ -60,6 +60,7 @@ use crate::signature::{Canonicalization, CanonicalizationAlgorithm};
 ///
 /// For the DKIM-Signature header itself, the value passed to this function
 /// must have `b=` set to empty (RFC 6376 §3.7 step 5).
+#[must_use]
 pub fn canonicalize_header(header: &Header, algo: CanonicalizationAlgorithm) -> Vec<u8> {
     let _ = (header, algo);
     todo!(
@@ -79,6 +80,7 @@ pub fn canonicalize_header(header: &Header, algo: CanonicalizationAlgorithm) -> 
 /// prevents an attacker from adding a header that was covered by the signature.
 ///
 /// Returns the concatenated canonical form of all selected headers.
+#[must_use]
 pub fn canonicalize_headers(
     headers: &Headers,
     signed_names: &[String],
@@ -97,6 +99,7 @@ pub fn canonicalize_headers(
 /// of the canonicalized output are hashed. If `None`, the entire body is used.
 ///
 /// Returns the canonicalized body bytes (possibly truncated to `limit`).
+#[must_use]
 pub fn canonicalize_body(
     body: &[u8],
     algo: CanonicalizationAlgorithm,
@@ -113,6 +116,7 @@ pub fn canonicalize_body(
 /// Compute the SHA-256 hash of the canonicalized body and return it as raw bytes.
 ///
 /// This is the `bh=` value (before base64 encoding).
+#[must_use]
 pub fn body_hash(canonicalized_body: &[u8]) -> [u8; 32] {
     let _ = canonicalized_body;
     todo!("ring::digest::digest(&ring::digest::SHA256, canonicalized_body)")

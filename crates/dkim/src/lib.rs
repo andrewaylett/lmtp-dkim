@@ -2,7 +2,7 @@
 //!
 //! # Overview
 //!
-//! DomainKeys Identified Mail (DKIM) lets a domain take responsibility for a
+//! `DomainKeys` Identified Mail (DKIM) lets a domain take responsibility for a
 //! message by attaching a cryptographic signature in a `DKIM-Signature` header
 //! field. Receiving MTAs (and milters) verify the signature by fetching the
 //! corresponding public key from DNS.
@@ -27,14 +27,9 @@
 //! # Verification algorithm (RFC 6376 §6)
 //!
 //! 1. Extract all `DKIM-Signature` headers (there may be multiple).
-//! 2. For each signature (in order):
-//!    a. Parse and validate the tag-list.
-//!    b. Fetch the public key: `<s>._domainkey.<d>` TXT record (§3.6.2).
-//!    c. Canonicalise body; verify `bh=` matches.
-//!    d. Canonicalise the signed header fields.
-//!    e. Verify the signature against the public key.
-//!    f. Record the result (`pass` / `fail` / `neutral` / `permerror` /
-//!       `temperror`).
+//! 2. For each signature (in order): parse the tag-list; fetch the public key
+//!    from DNS; canonicalise the body and check `bh=`; canonicalise the signed
+//!    headers; verify the signature; record the result.
 //! 3. Return the best result across all signatures.
 //!
 //! # Supported algorithms
@@ -73,8 +68,6 @@
 //! - [`key`]          – key types wrapping `ring` primitives.
 //! - [`sign`]         – signing a message with a private key.
 //! - [`verify`]       – verifying `DKIM-Signature` headers.
-
-#![warn(missing_docs)]
 
 pub mod canonicalize;
 pub mod dns;

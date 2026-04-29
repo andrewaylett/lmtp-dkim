@@ -10,7 +10,7 @@
 //! ```
 //!
 //! The header section and body are separated by exactly one blank line (a
-//! bare CRLF). The body may contain arbitrary octets subject to line-length
+//! bare `CRLF`). The body may contain arbitrary octets subject to line-length
 //! limits, but in the context of DKIM/ARC signing, the body hash is computed
 //! over the canonical body (RFC 6376 section 3.4).
 //!
@@ -31,7 +31,7 @@ use crate::{Headers, Result};
 
 /// A complete email message: header section plus body.
 ///
-/// The message is stored in its wire form with CRLF line endings throughout.
+/// The message is stored in its wire form with `CRLF` line endings throughout.
 /// Headers are parsed into the [`Headers`] structure; the body is kept as raw
 /// bytes to avoid unnecessary copies and to preserve exact byte content for
 /// hashing.
@@ -39,7 +39,7 @@ use crate::{Headers, Result};
 pub struct Message {
     /// The parsed header fields in original wire order.
     pub headers: Headers,
-    /// The raw message body with CRLF line endings.
+    /// The raw message body with `CRLF` line endings.
     ///
     /// Does not include the header/body separator blank line. The body may be
     /// empty (RFC 5322 section 3.5 permits messages with no body).
@@ -48,7 +48,8 @@ pub struct Message {
 
 impl Message {
     /// Construct a [`Message`] from pre-parsed components.
-    pub fn new(headers: Headers, body: MessageBody) -> Self {
+    #[must_use]
+    pub const fn new(headers: Headers, body: MessageBody) -> Self {
         Self { headers, body }
     }
 
@@ -61,7 +62,7 @@ impl Message {
     ///
     /// Returns an error if the header section is malformed, or if the
     /// header/body separator is absent.
-    pub fn parse(input: Bytes) -> Result<Self> {
+    pub fn parse(input: &Bytes) -> Result<Self> {
         // RFC 5322 §2.1: the first blank line (CRLF CRLF) separates headers
         // from the body. windows(4) finds it; we pass everything up to and
         // including that separator to Headers::parse.
@@ -78,7 +79,7 @@ impl Message {
 
         // Body is everything after CRLF CRLF — zero-copy slice of the input.
         let body = input.slice(sep + 4..);
-        Ok(Message {
+        Ok(Self {
             headers,
             body: MessageBody::new(body),
         })
@@ -87,7 +88,8 @@ impl Message {
     /// Serialise the message back to wire-format bytes.
     ///
     /// Output is `<headers section>\r\n<body>` where the headers section
-    /// already contains the per-field terminating CRLFs.
+    /// already contains the per-field terminating `CRLF`s.
+    #[must_use]
     pub fn to_bytes(&self) -> Bytes {
         let mut buf = Vec::with_capacity(self.wire_len());
         for header in self.headers.iter() {
@@ -99,6 +101,7 @@ impl Message {
     }
 
     /// Return the total length of the message in bytes (wire representation).
+    #[must_use]
     pub fn wire_len(&self) -> usize {
         // Allocation-free: name + ':' + value + CRLF for each header,
         // plus 2 bytes for the blank-line separator, plus body length.
@@ -119,12 +122,12 @@ impl Message {
 /// algorithms apply to the body:
 ///
 /// - **simple** (RFC 6376 section 3.4.3): the body is unchanged except that
-///   all trailing CRLF sequences are removed, then a single CRLF is appended.
-///   An empty body is canonicalised to a single CRLF.
+///   all trailing `CRLF` sequences are removed, then a single `CRLF` is appended.
+///   An empty body is canonicalised to a single `CRLF`.
 ///
 /// - **relaxed** (RFC 6376 section 3.4.4): runs of whitespace within each
 ///   line are compressed to a single SP; trailing whitespace is removed from
-///   each line; trailing empty lines are removed; a single CRLF is appended.
+///   each line; trailing empty lines are removed; a single `CRLF` is appended.
 ///
 /// The `l=` tag in DKIM-Signature allows signing only a prefix of the body
 /// (by byte count of the **canonicalised** body). This is not recommended
@@ -136,24 +139,28 @@ pub struct MessageBody(pub(crate) Bytes);
 impl MessageBody {
     /// Construct a body from raw bytes.
     ///
-    /// The bytes must use CRLF line endings. No validation is performed here;
+    /// The bytes must use `CRLF` line endings. No validation is performed here;
     /// malformed line endings will produce incorrect DKIM body hashes.
-    pub fn new(bytes: Bytes) -> Self {
+    #[must_use]
+    pub const fn new(bytes: Bytes) -> Self {
         Self(bytes)
     }
 
     /// The raw bytes of the body.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 
     /// The length of the body in bytes.
-    pub fn len(&self) -> usize {
+    #[must_use]
+    pub const fn len(&self) -> usize {
         self.0.len()
     }
 
     /// True if the body is empty.
-    pub fn is_empty(&self) -> bool {
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 }
@@ -168,10 +175,10 @@ mod rfc5322_message {
         )
     }
 
-    /// RFC 5322 §2.1: parse splits headers and body at the first CRLF CRLF.
+    /// RFC 5322 §2.1: parse splits headers and body at the first `\r\n\r\n`.
     #[test]
     fn parse_splits_correctly() {
-        let msg = Message::parse(simple_bytes()).unwrap();
+        let msg = Message::parse(&simple_bytes()).expect("valid message");
         assert_eq!(msg.headers.len(), 3);
         assert_eq!(msg.body.as_bytes(), b"Hello body\r\n");
     }
@@ -180,53 +187,57 @@ mod rfc5322_message {
     #[test]
     fn parse_empty_body() {
         let input = Bytes::from_static(b"From: a@b.com\r\n\r\n");
-        let msg = Message::parse(input).unwrap();
+        let msg = Message::parse(&input).expect("message with empty body");
         assert_eq!(msg.headers.len(), 1);
         assert!(msg.body.is_empty());
     }
 
-    /// RFC 5322 §2.1: body may itself contain CRLF CRLF; only the first
+    /// RFC 5322 §2.1: body may itself contain `\r\n\r\n`; only the first
     /// occurrence separates headers from body.
     #[test]
     fn crlf_in_body_not_confused_with_separator() {
         let input = Bytes::from_static(b"From: a@b.com\r\n\r\nPara 1\r\n\r\nPara 2\r\n");
-        let msg = Message::parse(input).unwrap();
+        let msg = Message::parse(&input).expect("valid message");
         assert_eq!(msg.body.as_bytes(), b"Para 1\r\n\r\nPara 2\r\n");
     }
 
-    /// Round-trip: parse → to_bytes must reproduce the original bytes exactly.
+    /// Round-trip: parse → `to_bytes` must reproduce the original bytes exactly.
     #[test]
     fn round_trip() {
         let original = simple_bytes();
-        let msg = Message::parse(original.clone()).unwrap();
+        let msg = Message::parse(&original).expect("valid message");
         let serialised = msg.to_bytes();
         assert_eq!(serialised, original);
     }
 
-    /// wire_len must equal the length of to_bytes().
+    /// `wire_len` must equal the length of `to_bytes()`.
     #[test]
     fn wire_len_matches_to_bytes() {
-        let msg = Message::parse(simple_bytes()).unwrap();
+        let msg = Message::parse(&simple_bytes()).expect("valid message");
         assert_eq!(msg.wire_len(), msg.to_bytes().len());
     }
 
-    /// RFC 5322 §2.1: missing CRLF CRLF separator is an error.
+    /// RFC 5322 §2.1: missing `\r\n\r\n` separator is an error.
     #[test]
     fn reject_no_separator() {
         let input = Bytes::from_static(b"From: a@b.com\r\nNo separator here");
-        assert!(Message::parse(input).is_err());
+        assert!(Message::parse(&input).is_err());
     }
 
-    /// Body bytes are a zero-copy slice of the input Bytes.
+    /// Body bytes are a zero-copy slice of the input `Bytes`.
     #[test]
     fn body_is_zero_copy_slice() {
         let original = simple_bytes();
-        let msg = Message::parse(original.clone()).unwrap();
+        let msg = Message::parse(&original).expect("valid message");
         // The body slice should share the same underlying allocation.
         assert_eq!(
             msg.body.as_bytes().as_ptr() as usize,
-            original[original.windows(4).position(|w| w == b"\r\n\r\n").unwrap() + 4..].as_ptr()
-                as usize
+            original[original
+                .windows(4)
+                .position(|w| w == b"\r\n\r\n")
+                .expect("separator present")
+                + 4..]
+                .as_ptr() as usize
         );
     }
 }

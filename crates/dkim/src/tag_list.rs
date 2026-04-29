@@ -24,9 +24,18 @@
 //!   an empty value, and the byte positions of other tags are fixed by their
 //!   original order in the header.
 
+#[expect(
+    unused_imports,
+    reason = "stub: HashMap used in parse() for duplicate detection"
+)]
 use std::collections::HashMap;
 
-use crate::{Error, Result};
+#[expect(
+    unused_imports,
+    reason = "stub: Error variants referenced when parse() is implemented"
+)]
+use crate::Error;
+use crate::Result;
 
 /// A parsed tag-value list.
 ///
@@ -43,8 +52,8 @@ impl TagList {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::TagListParse`] on syntax errors.
-    /// Returns [`Error::InvalidTag`] with `tag = "duplicate"` if a tag name
+    /// Returns [`crate::Error::TagListParse`] on syntax errors.
+    /// Returns [`crate::Error::InvalidTag`] with `tag = "duplicate"` if a tag name
     /// appears more than once (RFC 6376 §3.2 rule 5).
     pub fn parse(_input: &str) -> Result<Self> {
         todo!(
@@ -57,6 +66,7 @@ impl TagList {
     ///
     /// The name comparison is case-sensitive (tag names are case-sensitive per
     /// RFC 6376 §3.2, unlike header field names).
+    #[must_use]
     pub fn get(&self, name: &str) -> Option<&str> {
         self.ordered
             .iter()
@@ -72,6 +82,7 @@ impl TagList {
     /// Serialise to `tag=value; tag=value` form.
     ///
     /// Tags are emitted in insertion order. No trailing semicolon is added.
+    #[must_use]
     pub fn to_string_compact(&self) -> String {
         self.ordered
             .iter()
@@ -83,6 +94,7 @@ impl TagList {
     /// Return a version of the serialised form with `b=` set to the empty
     /// string, as required when computing the hash input for the DKIM-Signature
     /// header (RFC 6376 §3.7 step 5).
+    #[must_use]
     pub fn with_empty_b(&self) -> String {
         self.ordered
             .iter()

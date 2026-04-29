@@ -8,7 +8,7 @@
 //!
 //! | Algorithm | Private key format | Public key format |
 //! |-----------|-------------------|------------------|
-//! | RSA | PKCS#8 DER | SubjectPublicKeyInfo DER |
+//! | RSA | PKCS#8 DER | `SubjectPublicKeyInfo` DER |
 //! | Ed25519 | PKCS#8 DER (seed) | 32 raw bytes |
 //!
 //! Both formats are base64-encoded in the config file and DNS TXT records
@@ -22,7 +22,12 @@
 //! selector is used for fresh signatures. Retire the old selector once its
 //! TTL has elapsed and any in-transit mail has been delivered.
 
-use crate::{Error, Result};
+#[expect(
+    unused_imports,
+    reason = "stub: Error variants referenced when implemented"
+)]
+use crate::Error;
+use crate::Result;
 
 /// A DKIM private key, used for signing.
 ///
@@ -37,25 +42,38 @@ pub enum PrivateKey {
 impl std::fmt::Debug for PrivateKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PrivateKey::Rsa(_) => f.write_str("PrivateKey::Rsa(...)"),
-            PrivateKey::Ed25519(_) => f.write_str("PrivateKey::Ed25519(...)"),
+            Self::Rsa(_) => f.write_str("PrivateKey::Rsa(...)"),
+            Self::Ed25519(_) => f.write_str("PrivateKey::Ed25519(...)"),
         }
     }
 }
 
 impl PrivateKey {
     /// Load an RSA private key from PKCS#8 DER bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::KeyDecode`] if the DER bytes are malformed.
     pub fn rsa_from_pkcs8_der(_der: &[u8]) -> Result<Self> {
         todo!("ring::signature::RsaKeyPair::from_pkcs8(der).map_err(...)")
     }
 
     /// Load an Ed25519 private key from PKCS#8 DER bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::KeyDecode`] if the DER bytes are malformed.
     pub fn ed25519_from_pkcs8_der(_der: &[u8]) -> Result<Self> {
         todo!("ring::signature::Ed25519KeyPair::from_pkcs8(der).map_err(...)")
     }
 
     /// Load a private key from a PEM-encoded file (auto-detects RSA vs Ed25519
     /// from the PEM type header).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::KeyDecode`] if the file cannot be read or
+    /// the key bytes are malformed.
     pub fn from_pem_file(_path: &std::path::Path) -> Result<Self> {
         todo!(
             "read PEM; strip headers; base64-decode; \
@@ -68,6 +86,10 @@ impl PrivateKey {
     ///
     /// Returns the raw signature bytes. The caller is responsible for
     /// base64-encoding the result for the `b=` tag.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::Io`] if the signing operation fails.
     pub fn sign(&self, _data: &[u8]) -> Result<Vec<u8>> {
         todo!(
             "Rsa: ring::signature::RsaKeyPair::sign(&RSA_PKCS1_SHA256, rng, data, sig); \
@@ -76,10 +98,11 @@ impl PrivateKey {
     }
 
     /// The algorithm tag (`a=`) for the `DKIM-Signature` header.
-    pub fn algorithm(&self) -> crate::signature::Algorithm {
+    #[must_use]
+    pub const fn algorithm(&self) -> crate::signature::Algorithm {
         match self {
-            PrivateKey::Rsa(_) => crate::signature::Algorithm::RsaSha256,
-            PrivateKey::Ed25519(_) => crate::signature::Algorithm::Ed25519Sha256,
+            Self::Rsa(_) => crate::signature::Algorithm::RsaSha256,
+            Self::Ed25519(_) => crate::signature::Algorithm::Ed25519Sha256,
         }
     }
 }
@@ -97,8 +120,8 @@ pub enum PublicKey {
 impl std::fmt::Debug for PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PublicKey::Rsa(_) => f.write_str("PublicKey::Rsa(...)"),
-            PublicKey::Ed25519(_) => f.write_str("PublicKey::Ed25519(...)"),
+            Self::Rsa(_) => f.write_str("PublicKey::Rsa(...)"),
+            Self::Ed25519(_) => f.write_str("PublicKey::Ed25519(...)"),
         }
     }
 }
@@ -106,7 +129,11 @@ impl std::fmt::Debug for PublicKey {
 impl PublicKey {
     /// Verify a signature over `data`.
     ///
-    /// Returns `Ok(())` on success, [`Error::SignatureMismatch`] on failure.
+    /// Returns `Ok(())` on success, [`crate::Error::SignatureMismatch`] on failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::SignatureMismatch`] if the signature is invalid.
     pub fn verify(&self, _data: &[u8], _signature: &[u8]) -> Result<()> {
         todo!(
             "self.inner.verify(data, signature) \

@@ -129,7 +129,9 @@ pub trait MessageHandler: Send + Sync {
 pub struct Session<H: MessageHandler> {
     /// The server's hostname, used in greeting and `QUIT` responses.
     pub hostname: String,
+    #[expect(dead_code, reason = "stub: used by handle_command() once implemented")]
     state: SessionState,
+    #[expect(dead_code, reason = "stub: used by receive_data() once implemented")]
     handler: H,
 }
 
@@ -156,9 +158,18 @@ impl<H: MessageHandler> Session<H> {
     /// For most commands this is a single reply. For `DATA`, the session
     /// accumulates the message body separately via [`Session::receive_data`].
     ///
+    /// # Errors
+    ///
+    /// Returns [`crate::Error::OutOfSequence`] if the command is not valid in
+    /// the current session state.
+    ///
     /// # State transitions
     ///
     /// See the module-level state diagram.
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await handler once implemented"
+    )]
     pub async fn handle_command(&mut self, _command: crate::command::Command) -> Result<Reply> {
         todo!(
             "match self.state and command; transition state; \
@@ -172,6 +183,11 @@ impl<H: MessageHandler> Session<H> {
     /// Returns one [`Reply`] per recipient (in the order they were accepted).
     /// The caller must send all of them before reading the next command.
     ///
+    /// # Errors
+    ///
+    /// Returns an error if message parsing fails or the handler returns an
+    /// error.
+    ///
     /// # Dot-unstuffing
     ///
     /// The raw bytes received from the codec already have dot-stuffing removed
@@ -181,6 +197,10 @@ impl<H: MessageHandler> Session<H> {
     ///
     /// On success, resets to [`SessionState::Greeted`] so the client can begin
     /// a new transaction.
+    #[expect(
+        clippy::unused_async,
+        reason = "stub: will await handler once implemented"
+    )]
     pub async fn receive_data(&mut self, _raw: bytes::Bytes) -> Result<Vec<Reply>> {
         todo!(
             "parse Message from raw bytes; call self.handler.handle(envelope, message); \
