@@ -26,7 +26,7 @@
 //! The `d=` domain must be the same as or a parent of the `From:` header
 //! domain (RFC 6376 §6.1.1 step 8).
 
-use email_primitives::Domain;
+use email_primitives::address::Domain;
 
 #[expect(
     unused_imports,
@@ -38,6 +38,7 @@ use crate::{Error, Result};
 /// The signing algorithm used in `a=`.
 ///
 /// See RFC 6376 §3.3 and RFC 8463 for the Ed25519 variant.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Algorithm {
     /// `rsa-sha256` (RFC 6376 §3.3.1). RSA with PKCS#1 v1.5 padding and SHA-256.
@@ -84,6 +85,7 @@ impl Algorithm {
 }
 
 /// The canonicalization algorithm for a single part (header or body).
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CanonicalizationAlgorithm {
     /// `simple` – minimal transformation; preserves original casing and
@@ -124,6 +126,7 @@ impl CanonicalizationAlgorithm {
 /// The `c=` tag: canonicalization algorithms for header and body.
 ///
 /// Encoded as `<header>/<body>`. Defaults to `simple/simple`.
+#[expect(clippy::exhaustive_structs, reason = "exhaustive by RFC")]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Canonicalization {
     /// Algorithm for header fields.
@@ -163,6 +166,7 @@ impl Canonicalization {
 ///
 /// This struct owns the decoded, validated fields. The raw base64 data for
 /// `b=` (signature) and `bh=` (body hash) is decoded into byte vectors.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct DkimSignature {
     /// `a=` – signing algorithm.

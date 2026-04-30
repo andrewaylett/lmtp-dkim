@@ -45,6 +45,7 @@
 /// A single method result within an `Authentication-Results` header.
 ///
 /// Corresponds to one `; method=result ...` clause.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct AuthResultsValue {
     /// The method name, e.g. `"dkim"`, `"spf"`, `"dmarc"`, `"arc"`.
@@ -67,6 +68,7 @@ pub struct AuthResultsValue {
 /// A single property within a method result.
 ///
 /// Encoded as `<ptype>.<property>=<value>` in the header.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct AuthResultProperty {
     /// The property type, e.g. `"header"`, `"smtp"`, `"policy"`.

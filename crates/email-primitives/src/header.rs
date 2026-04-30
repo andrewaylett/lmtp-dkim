@@ -30,6 +30,11 @@
 //! duplicates.
 
 use crate::{Error, Result};
+use bytes::Bytes;
+use winnow::Parser;
+use winnow::combinator::terminated;
+use winnow::error::{ContextError, StrContext};
+use winnow::token::{rest, take_until};
 
 /// The name portion of a header field (`field-name` per RFC 5322 section 2.2).
 ///
@@ -52,7 +57,7 @@ impl HeaderName {
     ///
     /// Returns [`Error::InvalidHeaderName`] if the name is empty, contains
     /// characters outside printable US-ASCII (33–126), or contains a colon.
-    pub fn new(name: impl Into<String>) -> Result<Self> {
+    pub fn new<T: Into<String>>(name: T) -> Result<Self> {
         let s: String = name.into();
         if s.is_empty() {
             return Err(Error::InvalidHeaderName(s));
@@ -125,7 +130,7 @@ impl HeaderValue {
     ///
     /// Returns [`Error::InvalidHeaderValue`] if the value contains bare CR or
     /// LF outside of `CRLF`-WSP folding sequences.
-    pub fn new(value: impl Into<String>) -> Result<Self> {
+    pub fn new<T: Into<String>>(value: T) -> Result<Self> {
         let s: String = value.into();
         let bytes = s.as_bytes();
         let mut i = 0;
@@ -183,6 +188,7 @@ impl std::fmt::Display for HeaderValue {
 ///
 /// Note that the value typically starts with a space (e.g. `Subject: Hello`),
 /// and that space is part of the value.
+#[expect(clippy::exhaustive_structs, reason = "Represents a key/value pair")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Header {
     /// The field name.
@@ -209,26 +215,28 @@ impl Header {
     /// Returns [`Error::MalformedMessage`] if the input has no `:` separator or
     /// contains non-UTF-8 bytes. Returns [`Error::InvalidHeaderName`] or
     /// [`Error::InvalidHeaderValue`] for structurally invalid fields.
-    pub fn parse(input: &[u8]) -> Result<Self> {
-        // Find the first ':' to split name from value.
-        let colon =
-            input
-                .iter()
-                .position(|&b| b == b':')
-                .ok_or_else(|| Error::MalformedMessage {
-                    reason: "header field has no ':' separator".to_owned(),
-                })?;
+    pub fn parse(input: &Bytes) -> Result<Self> {
+        let (name_bytes, remainder) = (
+            terminated(
+                take_until(1.., b':').context(StrContext::Label("Header Name")),
+                b':',
+            ),
+            rest::<&[u8], ContextError<StrContext>>.context(StrContext::Label("Header Value")),
+        )
+            .context(StrContext::Label("Header"))
+            .parse(input)
+            .map_err(|e| Error::MalformedMessage {
+                reason: format!("header field has no ':' separator: {e}"),
+            })?;
 
-        let name_bytes = &input[..colon];
-        let name_str = std::str::from_utf8(name_bytes).map_err(|_| Error::MalformedMessage {
-            reason: "non-UTF-8 header field name".to_owned(),
+        let name_str = std::str::from_utf8(name_bytes).map_err(|e| Error::MalformedMessage {
+            reason: format!("non-UTF-8 header field name: {e}"),
         })?;
         let name = HeaderName::new(name_str)?;
 
         // Value is everything after ':' up to (but not including) the final CRLF.
-        let value_bytes = &input[colon + 1..];
-        let value_str = std::str::from_utf8(value_bytes).map_err(|_| Error::MalformedMessage {
-            reason: "non-UTF-8 header field value".to_owned(),
+        let value_str = std::str::from_utf8(remainder).map_err(|e| Error::MalformedMessage {
+            reason: format!("non-UTF-8 header field value: {e}"),
         })?;
         // Strip exactly the trailing CRLF (folds inside are preserved).
         let value_str = value_str.strip_suffix("\r\n").unwrap_or(value_str);
@@ -308,14 +316,14 @@ impl Headers {
     ///
     /// Returns [`Error::MalformedMessage`] if the header section is
     /// syntactically invalid.
-    pub fn parse(input: &[u8]) -> Result<(Self, &[u8])> {
+    pub fn parse(input: &Bytes) -> Result<(Self, Bytes)> {
         let mut headers = Self::new();
         let mut pos = 0;
 
         loop {
             // Blank line (CRLF with nothing before it) marks end of headers.
             if input[pos..].starts_with(b"\r\n") {
-                return Ok((headers, &input[pos + 2..]));
+                return Ok((headers, input.slice(pos + 2..)));
             }
             if pos >= input.len() {
                 return Err(Error::MalformedMessage {
@@ -325,7 +333,7 @@ impl Headers {
 
             let header_start = pos;
             let header_end = find_header_end(input, pos)?;
-            let header = Header::parse(&input[header_start..header_end])?;
+            let header = Header::parse(&input.slice(header_start..header_end))?;
             headers.push(header);
             pos = header_end;
         }
@@ -385,25 +393,25 @@ mod rfc5322_header_name {
     /// RFC 5322 §2.2: colon is not allowed in field name.
     #[test]
     fn reject_colon() {
-        assert!(HeaderName::new("Sub:ject").is_err());
+        HeaderName::new("Sub:ject").expect_err("Header contains a colon");
     }
 
     /// RFC 5322 §2.2: space (char 32) is below the ftext floor.
     #[test]
     fn reject_space() {
-        assert!(HeaderName::new("Sub ject").is_err());
+        HeaderName::new("Sub ject").expect_err("Header contains a space");
     }
 
     /// RFC 5322 §2.2: DEL (char 127) is above the ftext ceiling.
     #[test]
     fn reject_del() {
-        assert!(HeaderName::new("Sub\x7fject").is_err());
+        HeaderName::new("Sub\x7fject").expect_err("Header contains DEL character");
     }
 
     /// RFC 5322 §2.2: empty string is not a valid field name.
     #[test]
     fn reject_empty() {
-        assert!(HeaderName::new("").is_err());
+        HeaderName::new("").expect_err("Header name cannot be empty");
     }
 
     /// RFC 5322 §2.2: field names are case-insensitive.
@@ -447,19 +455,19 @@ mod rfc5322_header_value {
     /// RFC 5322 §2.2: bare CR is not allowed.
     #[test]
     fn reject_bare_cr() {
-        assert!(HeaderValue::new(" val\rue").is_err());
+        HeaderValue::new(" val\rue").expect_err("bare CR");
     }
 
     /// RFC 5322 §2.2: bare LF is not allowed.
     #[test]
     fn reject_bare_lf() {
-        assert!(HeaderValue::new(" val\nue").is_err());
+        HeaderValue::new(" val\nue").expect_err("bare LF");
     }
 
     /// RFC 5322 §2.2: `CRLF` not followed by WSP is rejected.
     #[test]
     fn reject_crlf_without_wsp() {
-        assert!(HeaderValue::new(" val\r\nue").is_err());
+        HeaderValue::new(" val\r\nue").expect_err("CRLF without WSP");
     }
 
     /// RFC 5322 §2.2.3: unfold removes `CRLF` before SP, keeping the SP.
@@ -491,7 +499,7 @@ mod rfc5322_header_parse {
     /// RFC 5322 §2.2: parse a simple non-folded header field.
     #[test]
     fn parse_simple() {
-        let h = Header::parse(b"Subject: Hello\r\n").expect("simple header");
+        let h = Header::parse(&Bytes::from_static(b"Subject: Hello\r\n")).expect("simple header");
         assert_eq!(h.name.as_str(), "Subject");
         assert_eq!(h.value.as_str(), " Hello");
     }
@@ -499,7 +507,8 @@ mod rfc5322_header_parse {
     /// RFC 5322 §2.2.3: parse a folded header field preserving the fold.
     #[test]
     fn parse_folded() {
-        let h = Header::parse(b"Subject: Hello\r\n world\r\n").expect("folded header");
+        let h = Header::parse(&Bytes::from_static(b"Subject: Hello\r\n world\r\n"))
+            .expect("folded header");
         assert_eq!(h.name.as_str(), "Subject");
         assert!(h.value.as_str().contains("\r\n"));
         assert_eq!(h.value.unfold(), " Hello world");
@@ -509,14 +518,15 @@ mod rfc5322_header_parse {
     #[test]
     fn wire_round_trip() {
         let original = "Subject: Hello\r\n";
-        let h = Header::parse(original.as_bytes()).expect("valid header");
+        let h = Header::parse(&Bytes::from_static(original.as_bytes())).expect("valid header");
         assert_eq!(h.to_wire(), original);
     }
 
     /// RFC 5322 §2.2: leading space after colon is part of value.
     #[test]
     fn leading_space_in_value() {
-        let h = Header::parse(b"From: alice@example.com\r\n").expect("From header");
+        let h = Header::parse(&Bytes::from_static(b"From: alice@example.com\r\n"))
+            .expect("From header");
         assert_eq!(h.value.as_str(), " alice@example.com");
     }
 }
@@ -528,26 +538,27 @@ mod rfc5322_headers_parse {
     /// RFC 5322 §2.1: headers section terminated by blank line (`CRLF CRLF`).
     #[test]
     fn parse_basic() {
-        let input = b"From: alice@example.com\r\nTo: bob@example.com\r\n\r\nBody here";
-        let (headers, body) = Headers::parse(input).expect("basic headers");
+        let input =
+            Bytes::from_static(b"From: alice@example.com\r\nTo: bob@example.com\r\n\r\nBody here");
+        let (headers, body) = Headers::parse(&input).expect("basic headers");
         assert_eq!(headers.len(), 2);
-        assert_eq!(body, b"Body here");
+        assert_eq!(&*body, b"Body here");
     }
 
     /// RFC 5322 §2.1: empty header section (blank line only) is valid.
     #[test]
     fn parse_empty_headers() {
-        let input = b"\r\nBody";
-        let (headers, body) = Headers::parse(input).expect("empty header section");
+        let input = Bytes::from_static(b"\r\nBody");
+        let (headers, body) = Headers::parse(&input).expect("empty header section");
         assert_eq!(headers.len(), 0);
-        assert_eq!(body, b"Body");
+        assert_eq!(&*body, b"Body");
     }
 
     /// RFC 5322 §2.2.3: folded header is parsed as a single field.
     #[test]
     fn parse_folded_header() {
-        let input = b"Subject: Hello\r\n world\r\n\r\n";
-        let (headers, _) = Headers::parse(input).expect("folded header section");
+        let input = Bytes::from_static(b"Subject: Hello\r\n world\r\n\r\n");
+        let (headers, _) = Headers::parse(&input).expect("folded header section");
         assert_eq!(headers.len(), 1);
         assert_eq!(
             headers.iter().next().expect("one header").name.as_str(),
@@ -558,8 +569,8 @@ mod rfc5322_headers_parse {
     /// RFC 6376 §5.4.2: insertion order is preserved (top to bottom).
     #[test]
     fn insertion_order_preserved() {
-        let input = b"From: a\r\nReceived: x\r\nReceived: y\r\n\r\n";
-        let (headers, _) = Headers::parse(input).expect("headers with duplicates");
+        let input = Bytes::from_static(b"From: a\r\nReceived: x\r\nReceived: y\r\n\r\n");
+        let (headers, _) = Headers::parse(&input).expect("headers with duplicates");
         let name = HeaderName::new("Received").expect("valid header name");
         let received: Vec<_> = headers.get_all(&name).map(|h| h.value.as_str()).collect();
         assert_eq!(received, [" x", " y"]);
@@ -568,8 +579,8 @@ mod rfc5322_headers_parse {
     /// RFC 6376 §5.4.2: `get_last` returns the bottommost occurrence.
     #[test]
     fn get_last_bottommost() {
-        let input = b"From: first\r\nFrom: second\r\n\r\n";
-        let (headers, _) = Headers::parse(input).expect("duplicate From headers");
+        let input = Bytes::from_static(b"From: first\r\nFrom: second\r\n\r\n");
+        let (headers, _) = Headers::parse(&input).expect("duplicate From headers");
         let name = HeaderName::new("From").expect("valid header name");
         let last = headers.get_last(&name).expect("at least one From header");
         assert_eq!(last.value.as_str(), " second");
@@ -578,15 +589,15 @@ mod rfc5322_headers_parse {
     /// RFC 5322 §2.1: missing blank-line terminator is an error.
     #[test]
     fn reject_missing_terminator() {
-        let result = Headers::parse(b"From: alice@example.com\r\n");
-        assert!(result.is_err());
+        let result = Headers::parse(&Bytes::from_static(b"From: alice@example.com\r\n"));
+        result.expect_err("missing blank line terminator");
     }
 
     /// Body bytes after the blank line are returned unmodified.
     #[test]
     fn body_returned_correctly() {
-        let input = b"From: a\r\n\r\nHello\r\nWorld\r\n";
-        let (_, body) = Headers::parse(input).expect("valid headers");
-        assert_eq!(body, b"Hello\r\nWorld\r\n");
+        let input = Bytes::from_static(b"From: a\r\n\r\nHello\r\nWorld\r\n");
+        let (_, body) = Headers::parse(&input).expect("valid headers");
+        assert_eq!(&*body, b"Hello\r\nWorld\r\n");
     }
 }

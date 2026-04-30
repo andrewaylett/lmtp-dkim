@@ -132,6 +132,7 @@ impl std::fmt::Display for ReplyCode {
 /// <code>-<line2>\r\n
 /// <code> <lastline>\r\n
 /// ```
+#[expect(clippy::exhaustive_structs, reason = "Exhaustive by RFC")]
 #[derive(Debug, Clone)]
 pub struct Reply {
     /// The reply code.
@@ -143,7 +144,7 @@ pub struct Reply {
 impl Reply {
     /// Construct a single-line reply.
     #[must_use]
-    pub fn new(code: ReplyCode, text: impl Into<String>) -> Self {
+    pub fn new<T: Into<String>>(code: ReplyCode, text: T) -> Self {
         Self {
             code,
             lines: vec![text.into()],
@@ -164,6 +165,7 @@ impl Reply {
         let mut out = String::new();
         for (i, line) in self.lines.iter().enumerate() {
             let sep = if i + 1 == self.lines.len() { ' ' } else { '-' };
+            #[expect(clippy::expect_used, reason = "String::write is infallible")]
             write!(out, "{}{}{}\r\n", self.code, sep, line)
                 .expect("writing to String is infallible");
         }

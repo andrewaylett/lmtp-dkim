@@ -47,8 +47,13 @@ pub mod address;
 pub mod error;
 pub mod header;
 pub mod message;
+pub mod quotes;
 
-pub use address::{Domain, EmailAddress, LocalPart, NullPath, ReversePath};
+pub use address::EmailAddress;
+pub use address::domain::Domain;
+pub use address::local_part::LocalPart;
+pub use address::owned_reverse_path::OwnedReversePath;
+pub use address::reverse_path::ReversePath;
 pub use error::Error;
 pub use header::{Header, HeaderName, HeaderValue, Headers};
 pub use message::{Message, MessageBody};

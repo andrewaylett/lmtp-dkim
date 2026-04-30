@@ -29,7 +29,7 @@ tokio-util = { version = "0.7", features = ["codec"] }
 bytes = "1"
 
 # Parsing (winnow is the modern successor to nom; zero-copy, combinator-based)
-winnow = "0.6"
+winnow = "1"
 
 # Cryptography
 # ring provides RSA-PKCS1v15-SHA256 and Ed25519, the two DKIM algorithms
@@ -39,7 +39,7 @@ base64 = "0.22"
 
 # DNS – used to look up DKIM public keys (_domainkey TXT records, RFC 6376 §3.6)
 # and for SPF/DMARC lookups in the service.
-hickory-resolver = "0.24"
+hickory-resolver = "0.26.0"
 
 # Error handling
 thiserror = "2"
@@ -50,7 +50,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 # Configuration and CLI (service crate only)
 serde = { version = "1", features = ["derive"] }
-toml  = "0.8"
+toml  = "1"
 clap  = { version = "4", features = ["derive", "env"] }
 
 # Error propagation in binaries (not for libraries)
@@ -59,18 +59,44 @@ anyhow = "1"
 [workspace.lints.rust]
 dead_code       = "deny"
 missing_docs    = "deny"
-unreachable_pub = "warn"
+unreachable_pub = "deny"
 unused_imports  = "deny"
+
+# Lint enforcement
+unfulfilled_lint_expectations = "deny"
 
 [workspace.lints.clippy]
 # Lint groups (lower priority so individual overrides take effect)
-all      = { level = "deny", priority = -3 }
 pedantic = { level = "deny", priority = -2 }
-nursery  = { level = "deny", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+complexity = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+style = { level = "deny", priority = -1 }
+
 # Selected restriction lints
+allow_attributes = "deny"
 allow_attributes_without_reason = "deny"
-unwrap_used                      = "deny"
+arbitrary_source_item_ordering = "deny"
+as_pointer_underscore = "deny"
+assertions_on_result_states = "deny"
+cfg_not_test = "deny"
+clone_on_ref_ptr = "deny"
+derive_partial_eq_without_eq = "deny"
+exhaustive_enums = "deny"
+exhaustive_structs = "deny"
+expect_used = "deny"
+fn_to_numeric_cast_any = "deny"
+if_then_some_else_none = "deny"
+impl_trait_in_params = "deny"
+#indexing_slicing = "deny"
+map_err_ignore = "deny"
+missing_assert_message = "deny"
+missing_asserts_for_indexing = "deny"
+mixed_read_write_in_expression = "deny"
+panic = "deny"
+unwrap_used = "deny"
 # Project-wide allowances
-missing_panics_doc      = "allow"  # stubs use todo!() which panics; revisit once implemented
+missing_panics_doc = "allow"  # stubs use todo!() which panics; revisit once implemented
 module_name_repetitions = "allow"  # conventional for re-exported types (e.g. dkim::DkimSignature)
-wildcard_imports        = "allow"  # idiomatic in test modules (use super::*)
+wildcard_imports        = "deny"  # idiomatic in test modules (use super::*)

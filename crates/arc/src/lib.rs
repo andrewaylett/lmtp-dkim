@@ -85,6 +85,7 @@ use thiserror::Error;
 pub const MAX_INSTANCE: u32 = 50;
 
 /// Errors that can arise during ARC processing.
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum Error {
     /// An ARC header field could not be parsed.

@@ -37,6 +37,7 @@ use crate::Result;
 use crate::headers::ArcSet;
 
 /// The result of validating an ARC chain.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ArcChainResult {
     /// No ARC headers were present.
@@ -60,6 +61,7 @@ impl ArcChainResult {
 }
 
 /// The output of a successful chain validation.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct ChainValidationOutput {
     /// The overall chain result.

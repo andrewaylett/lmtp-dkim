@@ -35,6 +35,10 @@ use crate::{Headers, Result};
 /// Headers are parsed into the [`Headers`] structure; the body is kept as raw
 /// bytes to avoid unnecessary copies and to preserve exact byte content for
 /// hashing.
+#[expect(
+    clippy::exhaustive_structs,
+    reason = "RFC 5322 provides for only two parts to a message"
+)]
 #[derive(Debug, Clone)]
 pub struct Message {
     /// The parsed header fields in original wire order.
@@ -63,22 +67,9 @@ impl Message {
     /// Returns an error if the header section is malformed, or if the
     /// header/body separator is absent.
     pub fn parse(input: &Bytes) -> Result<Self> {
-        // RFC 5322 §2.1: the first blank line (CRLF CRLF) separates headers
-        // from the body. windows(4) finds it; we pass everything up to and
-        // including that separator to Headers::parse.
-        let sep = input
-            .windows(4)
-            .position(|w| w == b"\r\n\r\n")
-            .ok_or_else(|| crate::Error::MalformedMessage {
-                reason: "missing header/body separator (CRLF CRLF)".to_owned(),
-            })?;
-
         // Headers::parse expects the blank line as its terminator.
-        let (headers, leftover) = Headers::parse(&input[..sep + 4])?;
-        debug_assert!(leftover.is_empty(), "Headers::parse left unexpected bytes");
+        let (headers, body) = Headers::parse(input)?;
 
-        // Body is everything after CRLF CRLF — zero-copy slice of the input.
-        let body = input.slice(sep + 4..);
         Ok(Self {
             headers,
             body: MessageBody::new(body),
@@ -221,7 +212,7 @@ mod rfc5322_message {
     #[test]
     fn reject_no_separator() {
         let input = Bytes::from_static(b"From: a@b.com\r\nNo separator here");
-        assert!(Message::parse(&input).is_err());
+        Message::parse(&input).expect_err("missing header/body separator");
     }
 
     /// Body bytes are a zero-copy slice of the input `Bytes`.
