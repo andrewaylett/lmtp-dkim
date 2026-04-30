@@ -35,7 +35,7 @@
 //! `hickory-resolver` internal cache. This avoids repeated DNS lookups for
 //! the same key within its TTL window.
 
-use hickory_resolver::TokioAsyncResolver;
+use hickory_resolver::TokioResolver;
 
 #[expect(
     unused_imports,
@@ -46,6 +46,7 @@ use crate::Result;
 use crate::key::PublicKey;
 
 /// A parsed DKIM DNS record.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct DkimDnsRecord {
     /// `v=` – version. If present must be `DKIM1`; if absent, assume `DKIM1`.
@@ -65,6 +66,7 @@ pub struct DkimDnsRecord {
 }
 
 /// Key type from the `k=` DNS tag.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum KeyType {
     /// `k=rsa` – RSA public key in `SubjectPublicKeyInfo` (SPKI) DER format,
@@ -76,6 +78,7 @@ pub enum KeyType {
 }
 
 /// Flags from the `t=` DNS tag.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DnsFlag {
     /// `y` – the domain is in testing mode. Verifiers SHOULD NOT treat test
@@ -117,7 +120,7 @@ impl DkimDnsRecord {
 /// (e.g. via `Arc`) to benefit from the internal DNS cache.
 pub struct DkimResolver {
     #[expect(dead_code, reason = "stub: used by lookup() once implemented")]
-    inner: TokioAsyncResolver,
+    inner: TokioResolver,
 }
 
 impl DkimResolver {
@@ -127,10 +130,6 @@ impl DkimResolver {
     /// # Errors
     ///
     /// Returns an error if the system resolver configuration cannot be read.
-    #[expect(
-        clippy::unused_async,
-        reason = "stub: will await resolver once implemented"
-    )]
     pub async fn from_system_conf() -> Result<Self> {
         todo!("TokioAsyncResolver::from_system_conf(ResolverOpts::default())")
     }

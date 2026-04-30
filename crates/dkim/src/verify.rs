@@ -49,6 +49,7 @@ use crate::{Error, Result};
 /// The outcome of verifying a single `DKIM-Signature`.
 ///
 /// Maps to the `dkim` method results defined in RFC 7601 §2.7.1.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VerificationStatus {
     /// `pass` – the signature validated successfully.
@@ -69,6 +70,7 @@ pub enum VerificationStatus {
 }
 
 /// The result of verifying one `DKIM-Signature` header.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct VerificationResult {
     /// The overall outcome.

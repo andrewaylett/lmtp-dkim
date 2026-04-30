@@ -23,11 +23,13 @@
 //! address (RFC 5321 section 4.1.2). Parameters are key=value pairs or bare
 //! keywords. Recognised parameters include `SIZE=<n>` and `BODY=8BITMIME`.
 
-use email_primitives::{Domain, EmailAddress, NullPath};
-
 use crate::Result;
+use email_primitives::EmailAddress;
+use email_primitives::address::Domain;
+use email_primitives::address::OwnedReversePath;
 
 /// A parsed LMTP client command.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Command {
     /// `LHLO <domain>`
@@ -50,7 +52,7 @@ pub enum Command {
     /// - `BODY=7BIT | 8BITMIME | BINARYMIME` – message body encoding.
     Mail {
         /// The sender's reverse-path.
-        from: NullPath,
+        from: OwnedReversePath,
         /// Optional ESMTP mail parameters.
         parameters: Vec<MailParam>,
     },
@@ -136,6 +138,7 @@ impl std::fmt::Display for Command {
 }
 
 /// An ESMTP parameter for the `MAIL FROM` command.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MailParam {
     /// `SIZE=<n>` – estimated message size in octets (RFC 1870).
@@ -150,6 +153,7 @@ pub enum MailParam {
 }
 
 /// An ESMTP parameter for the `RCPT TO` command.
+#[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RcptParam {
     /// An unrecognised parameter preserved verbatim.

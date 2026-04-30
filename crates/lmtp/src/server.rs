@@ -38,6 +38,7 @@ use crate::Result;
 use crate::session::MessageHandler;
 
 /// Configuration for the LMTP server.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct ServerConfig {
     /// The hostname to announce in the `220` greeting and `221` closing.

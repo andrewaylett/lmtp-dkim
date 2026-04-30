@@ -84,6 +84,7 @@ pub use verify::{VerificationResult, VerificationStatus, Verifier};
 use thiserror::Error;
 
 /// Errors that can arise during DKIM signing or verification.
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum Error {
     /// A tag-list could not be parsed.

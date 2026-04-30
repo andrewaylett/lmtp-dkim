@@ -22,13 +22,14 @@
 //! [`MessageHandler::handle`], which returns one [`crate::Reply`] per
 //! recipient. The session then sends those replies in order.
 
-use email_primitives::{EmailAddress, Message, NullPath};
-
 use crate::{Result, response::Reply};
+use email_primitives::address::OwnedReversePath;
+use email_primitives::{EmailAddress, Message};
 
 /// The current state of an LMTP session.
+#[expect(dead_code, reason = "stub: used by handle_command() once implemented")]
 #[derive(Debug)]
-pub enum SessionState {
+pub(crate) enum SessionState {
     /// TCP connection established; `220` greeting sent; waiting for `LHLO`.
     Connected,
 
@@ -43,7 +44,7 @@ pub enum SessionState {
         /// The domain from `LHLO`.
         client_domain: email_primitives::Domain,
         /// The envelope sender.
-        sender: NullPath,
+        sender: OwnedReversePath,
         /// Parameters from the `MAIL FROM` command.
         mail_params: Vec<crate::command::MailParam>,
     },
@@ -53,7 +54,7 @@ pub enum SessionState {
         /// The domain from `LHLO`.
         client_domain: email_primitives::Domain,
         /// The envelope sender.
-        sender: NullPath,
+        sender: OwnedReversePath,
         /// Accepted recipients, in the order they were received.
         ///
         /// LMTP requires that per-recipient DATA responses are sent in the
@@ -66,7 +67,7 @@ pub enum SessionState {
         /// The domain from `LHLO`.
         client_domain: email_primitives::Domain,
         /// The envelope sender.
-        sender: NullPath,
+        sender: OwnedReversePath,
         /// The recipients awaiting per-message responses.
         recipients: Vec<EmailAddress>,
     },
@@ -76,17 +77,19 @@ pub enum SessionState {
 }
 
 /// Envelope information for a received message.
+#[non_exhaustive]
 #[derive(Debug)]
 pub struct Envelope {
     /// The `LHLO` domain, identifying the connecting client.
     pub client_domain: email_primitives::Domain,
     /// The `MAIL FROM` reverse-path.
-    pub sender: NullPath,
+    pub sender: OwnedReversePath,
     /// The accepted `RCPT TO` addresses, in order.
     pub recipients: Vec<EmailAddress>,
 }
 
 /// Outcome of processing a single recipient's delivery.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct RecipientResult {
     /// The recipient address.
@@ -126,6 +129,8 @@ pub trait MessageHandler: Send + Sync {
 ///
 /// The generic parameter `H` is the [`MessageHandler`] that processes received
 /// messages. The session is created per TCP/Unix connection.
+#[non_exhaustive]
+#[derive(Debug)]
 pub struct Session<H: MessageHandler> {
     /// The server's hostname, used in greeting and `QUIT` responses.
     pub hostname: String,
@@ -137,7 +142,7 @@ pub struct Session<H: MessageHandler> {
 
 impl<H: MessageHandler> Session<H> {
     /// Construct a new session in the [`SessionState::Connected`] state.
-    pub fn new(hostname: impl Into<String>, handler: H) -> Self {
+    pub fn new<S: Into<String>>(hostname: S, handler: H) -> Self {
         Self {
             hostname: hostname.into(),
             state: SessionState::Connected,

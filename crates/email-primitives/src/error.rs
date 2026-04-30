@@ -3,7 +3,8 @@
 use thiserror::Error;
 
 /// Errors arising from parsing or validating email primitives.
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Debug, Error)]
+#[non_exhaustive]
 pub enum Error {
     /// A header field name contained characters outside the printable US-ASCII
     /// range 33–126 or included a colon (RFC 5322 section 2.2).
@@ -17,7 +18,7 @@ pub enum Error {
 
     /// An email address could not be parsed per RFC 5321 section 4.1.2.
     #[error("invalid email address: {0:?}")]
-    InvalidAddress(String),
+    InvalidAddress(String, #[source] Option<Box<dyn std::error::Error>>),
 
     /// A domain name was syntactically invalid (RFC 5321 section 4.1.2,
     /// RFC 1123 section 2.1).

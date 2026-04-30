@@ -38,7 +38,7 @@
 //!     t=1234567890; b=...
 //! ```
 
-use email_primitives::Domain;
+use email_primitives::address::Domain;
 
 use crate::auth_results::AuthResultsValue;
 use crate::chain::ArcChainResult;
@@ -50,6 +50,7 @@ use crate::{Error, Result};
 /// RFC 8617 §5.1.1: a Participating Forwarder that observes `cv=fail` SHOULD
 /// still add its own ARC set (to preserve the chain history) but must set
 /// `cv=fail` in its own Seal.
+#[non_exhaustive]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChainValidation {
     /// `cv=none` – no ARC headers were present before this hop; this is the
@@ -98,6 +99,7 @@ impl From<ArcChainResult> for ChainValidation {
 }
 
 /// A parsed `ARC-Authentication-Results` header.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct AuthenticationResults {
     /// `i=` – instance number.
@@ -132,6 +134,7 @@ impl AuthenticationResults {
 ///
 /// Shares the same tag-value format as `DKIM-Signature` plus `i=`.
 /// The signing and verification logic is delegated to the `dkim` crate.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct ArcMessageSignature {
     /// `i=` – instance number.
@@ -164,6 +167,7 @@ impl ArcMessageSignature {
 }
 
 /// A parsed `ARC-Seal` header.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct ArcSeal {
     /// `i=` – instance number.
@@ -212,6 +216,7 @@ impl ArcSeal {
 ///
 /// A well-formed message with ARC has one [`ArcSet`] per instance number,
 /// with contiguous instance numbers starting at 1.
+#[non_exhaustive]
 #[derive(Debug, Clone)]
 pub struct ArcSet {
     /// The instance number (1-based).

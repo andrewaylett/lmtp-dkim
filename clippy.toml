@@ -1,0 +1,3 @@
+allow-expect-in-tests = true
+allow-indexing-slicing-in-tests = true
+source-item-ordering = ["module"]

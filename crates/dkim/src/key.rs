@@ -32,6 +32,7 @@ use crate::Result;
 /// A DKIM private key, used for signing.
 ///
 /// Wraps the `ring` key material. Key material is zeroed on drop by `ring`.
+#[non_exhaustive]
 pub enum PrivateKey {
     /// RSA private key. Minimum 2048-bit recommended (RFC 8301).
     Rsa(ring::signature::RsaKeyPair),
@@ -110,6 +111,7 @@ impl PrivateKey {
 /// A DKIM public key, used for verification.
 ///
 /// Constructed from DNS TXT record data by [`crate::dns::DkimDnsRecord`].
+#[non_exhaustive]
 pub enum PublicKey {
     /// RSA public key.
     Rsa(ring::signature::UnparsedPublicKey<Vec<u8>>),

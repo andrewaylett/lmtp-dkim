@@ -79,6 +79,7 @@ pub use session::Session;
 use thiserror::Error;
 
 /// Errors that can arise in LMTP processing.
+#[non_exhaustive]
 #[derive(Debug, Error)]
 pub enum Error {
     /// An I/O error on the underlying transport.

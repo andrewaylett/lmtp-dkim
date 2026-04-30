@@ -59,6 +59,7 @@ use crate::chain::ArcChainResult;
 use crate::headers::ArcSet;
 
 /// Parameters for adding an ARC set to a message.
+#[non_exhaustive]
 #[derive(Debug)]
 pub struct SealRequest {
     /// The authentication service identifier (typically the hostname of this

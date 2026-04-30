@@ -37,18 +37,13 @@
 //!   only appears once in the message. This prevents an attacker from
 //!   prepending a second occurrence of that header after signing.
 
-use email_primitives::{Domain, Message};
-
 use crate::Result;
 use crate::key::PrivateKey;
 use crate::signature::Canonicalization;
-#[expect(
-    unused_imports,
-    reason = "stub: DkimSignature used when sign() is implemented"
-)]
-use crate::signature::DkimSignature;
-
+use email_primitives::Message;
+use email_primitives::address::Domain;
 /// Parameters for a DKIM signing operation.
+#[non_exhaustive]
 #[derive(Debug)]
 pub struct SignRequest {
     /// `d=` – the signing domain. Must be the same as or a parent of the
@@ -81,7 +76,7 @@ impl SignRequest {
     /// Default header list covers the fields recommended by RFC 6376 §5.4.1
     /// plus "over-signing" of `From:` and `To:`.
     #[must_use]
-    pub fn new(domain: Domain, selector: impl Into<String>) -> Self {
+    pub fn new<S: Into<String>>(domain: Domain, selector: S) -> Self {
         Self {
             domain,
             selector: selector.into(),
