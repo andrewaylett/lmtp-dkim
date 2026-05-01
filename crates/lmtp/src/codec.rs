@@ -19,7 +19,7 @@
 //!   `String` (the line, without the CRLF).
 //!
 //! - [`DataCodec`]: accumulates bytes until `\r\n.\r\n`, applies dot-
-//!   unstuffing, and returns the complete message body as [`bytes::Bytes`].
+//!   unstuffing, and returns the complete message body as [`Bytes`].
 //!
 //! The [`crate::server`] and [`crate::session`] layers are responsible for
 //! swapping the active codec at the appropriate point in the conversation.
@@ -34,10 +34,11 @@
 //! We enforce command-line limits in [`CommandCodec`] and data-line limits in
 //! [`DataCodec`] to protect against resource exhaustion.
 
-use bytes::{Buf, BufMut, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+use std::io;
 use tokio_util::codec::{Decoder, Encoder};
 
-use crate::{Error, Result};
+use crate::{Error, Reply, Result};
 
 /// Maximum command/reply line length including CRLF (RFC 5321 §4.5.3.1).
 pub const MAX_COMMAND_LINE: usize = 512;
@@ -79,8 +80,8 @@ impl Decoder for CommandCodec {
         let Some(lf_pos) = src.iter().position(|&b| b == b'\n') else {
             // No complete line yet; enforce length limit against partial data.
             if src.len() >= self.max_line {
-                return Err(Error::Io(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
+                return Err(Error::Io(io::Error::new(
+                    io::ErrorKind::InvalidData,
                     "command line too long",
                 )));
             }
@@ -90,8 +91,8 @@ impl Decoder for CommandCodec {
         // +1 to include the LF itself in the length check.
         let line_len = lf_pos + 1;
         if line_len > self.max_line {
-            return Err(Error::Io(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
+            return Err(Error::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
                 "command line too long",
             )));
         }
@@ -106,8 +107,8 @@ impl Decoder for CommandCodec {
 
         let line = std::str::from_utf8(&line_bytes)
             .map_err(|_utf8_err| {
-                Error::Io(std::io::Error::new(
-                    std::io::ErrorKind::InvalidData,
+                Error::Io(io::Error::new(
+                    io::ErrorKind::InvalidData,
                     "command line is not valid UTF-8",
                 ))
             })?
@@ -128,10 +129,21 @@ impl Encoder<&str> for CommandCodec {
     }
 }
 
+impl Encoder<Reply> for CommandCodec {
+    type Error = Error;
+
+    fn encode(&mut self, item: Reply, dst: &mut BytesMut) -> Result<()> {
+        let wire = item.to_wire();
+        dst.reserve(wire.len());
+        dst.put(wire.as_bytes());
+        Ok(())
+    }
+}
+
 /// Decodes a SMTP/LMTP `DATA` body terminated by `\\r\\n.\\r\\n`.
 ///
 /// Applies dot-unstuffing: if a line begins with `..`, the leading `.` is
-/// stripped. Returns the complete unstuffed body as [`bytes::Bytes`] once the
+/// stripped. Returns the complete unstuffed body as [`Bytes`] once the
 /// terminator is seen.
 #[derive(Debug)]
 pub struct DataCodec {
@@ -147,14 +159,22 @@ impl DataCodec {
     }
 }
 
+impl Encoder<Bytes> for DataCodec {
+    type Error = Error;
+
+    fn encode(&mut self, _item: Bytes, _dst: &mut BytesMut) -> Result<()> {
+        Ok(())
+    }
+}
+
 impl Decoder for DataCodec {
-    type Item = bytes::Bytes;
+    type Item = Bytes;
     type Error = Error;
 
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>> {
         if src.len() > self.max_size {
-            return Err(Error::Io(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
+            return Err(Error::Io(io::Error::new(
+                io::ErrorKind::InvalidData,
                 "message too large",
             )));
         }
@@ -175,7 +195,7 @@ impl Decoder for DataCodec {
         src.advance(consumed_end);
 
         let unstuffed = dot_unstuff(&raw_body);
-        Ok(Some(bytes::Bytes::from(unstuffed)))
+        Ok(Some(Bytes::from(unstuffed)))
     }
 }
 
