@@ -18,7 +18,10 @@ pub enum Error {
 
     /// An email address could not be parsed per RFC 5321 section 4.1.2.
     #[error("invalid email address: {0:?}")]
-    InvalidAddress(String, #[source] Option<Box<dyn std::error::Error>>),
+    InvalidAddress(
+        String,
+        #[source] Option<Box<dyn std::error::Error + Send + Sync>>,
+    ),
 
     /// A domain name was syntactically invalid (RFC 5321 section 4.1.2,
     /// RFC 1123 section 2.1).
