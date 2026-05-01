@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 email-primitives = { workspace = true }
 bytes            = { workspace = true }
+futures-util     = { workspace = true }
 thiserror        = { workspace = true }
 tokio            = { workspace = true }
 tokio-util       = { workspace = true }

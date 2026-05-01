@@ -22,8 +22,9 @@ dkim              = { path = "crates/dkim" }
 arc               = { path = "crates/arc" }
 
 # Async runtime (tokio 1.x is the de-facto standard async runtime)
-tokio      = { version = "1", features = ["full"] }
-tokio-util = { version = "0.7", features = ["codec"] }
+tokio        = { version = "1", features = ["full"] }
+tokio-util   = { version = "0.7", features = ["codec"] }
+futures-util = { version = "0.3", default-features = false, features = ["sink"] }
 
 # Byte buffers
 bytes = "1"

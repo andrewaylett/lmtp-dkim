@@ -124,7 +124,7 @@ pub struct RecipientResult {
 /// This trait uses `async fn` in trait position (stabilised in Rust 1.75 via
 /// RPITIT). Implementations may perform async I/O (DNS, downstream LMTP,
 /// signing).
-pub trait MessageHandler: Send + Sync {
+pub trait MessageHandler: Send + Sync + Clone + 'static {
     /// Process a received message and return per-recipient outcomes.
     ///
     /// The returned `Vec` must have the same length as `envelope.recipients`
@@ -379,6 +379,7 @@ mod tests {
     use crate::{Command, Error, Reply, ReplyCode, Result};
     use email_primitives::Message;
 
+    #[derive(Clone)]
     struct NoopHandler;
 
     impl MessageHandler for NoopHandler {
