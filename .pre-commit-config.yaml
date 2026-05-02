@@ -72,4 +72,10 @@ repos:
   hooks:
   - id: init-hooks
   - id: cargo-fmt
+    stages:
+    - pre-commit
+    - pre-push
   - id: cargo-clippy
+    stages:
+    - pre-commit
+    - pre-push
