@@ -5,7 +5,7 @@ members = [
     "crates/lmtp",
     "crates/dkim",
     "crates/arc",
-    "crates/service",
+    "crates/service", "tools/cargo-bin",
 ]
 
 [workspace.package]
@@ -101,3 +101,8 @@ unwrap_used = "deny"
 missing_panics_doc = "allow"  # stubs use todo!() which panics; revisit once implemented
 module_name_repetitions = "allow"  # conventional for re-exported types (e.g. dkim::DkimSignature)
 wildcard_imports        = "deny"  # idiomatic in test modules (use super::*)
+
+[workspace.metadata.bin]
+cargo-binstall = { version = "1.18.1", locked = true }
+cargo-nextest = { version = "0.9.133", locked = true }
+cargo-mutants = { version = "27.0.0", locked = true }
