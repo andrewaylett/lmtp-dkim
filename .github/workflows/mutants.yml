@@ -1,0 +1,62 @@
+name: cargo-mutants
+
+env:
+  CARGO_TERM_COLOR: always
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+jobs:
+  cargo-mutants:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    steps:
+    - name: Check out
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+    - name: Set up Rust (stable)
+      uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+    - name: Cache build artifacts
+      uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+    - run: cargo mutants -vV --in-place
+
+    - uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: mutants-out
+        path: mutants.out
+
+  incremental-mutants:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+    - name: Check out
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      with:
+        fetch-depth: 0
+
+    - name: Set up Rust (stable)
+      uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+
+    - name: Cache build artifacts
+      uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+
+    - name: Relative diff
+      run: |
+        git branch -av
+        git diff origin/${{ github.base_ref }}.. | tee git.diff
+    - uses: Swatinem/rust-cache@v2
+    - name: Mutants
+      run: |
+        cargo mutants --no-shuffle -vV --in-diff git.diff
+    - name: Archive mutants.out
+      uses: actions/upload-artifact@v7
+      if: always()
+      with:
+        name: mutants-incremental.out
+        path: mutants.out

@@ -1,0 +1,12 @@
+[package]
+name = "cargo-bin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+cargo-run-bin = { version = "1.7.5", features = ["cli"] }
+
+[lints]
+workspace = true
