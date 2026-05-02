@@ -128,6 +128,17 @@ impl Encoder<&str> for CommandCodec {
     }
 }
 
+impl Encoder<crate::Reply> for CommandCodec {
+    type Error = Error;
+
+    fn encode(&mut self, item: crate::Reply, dst: &mut BytesMut) -> Result<()> {
+        let wire = item.to_wire();
+        dst.reserve(wire.len());
+        dst.put(wire.as_bytes());
+        Ok(())
+    }
+}
+
 /// Decodes a SMTP/LMTP `DATA` body terminated by `\\r\\n.\\r\\n`.
 ///
 /// Applies dot-unstuffing: if a line begins with `..`, the leading `.` is
@@ -144,6 +155,14 @@ impl DataCodec {
     #[must_use]
     pub const fn new(max_size: usize) -> Self {
         Self { max_size }
+    }
+}
+
+impl Encoder<bytes::Bytes> for DataCodec {
+    type Error = Error;
+
+    fn encode(&mut self, _item: bytes::Bytes, _dst: &mut BytesMut) -> Result<()> {
+        Ok(())
     }
 }
 
