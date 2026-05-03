@@ -25,7 +25,7 @@ jobs:
 
     - run: cargo mutants -vV --in-place
 
-    - uses: actions/upload-artifact@v7
+    - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       if: always()
       with:
         name: mutants-out
@@ -50,12 +50,12 @@ jobs:
       run: |
         git branch -av
         git diff origin/${{ github.base_ref }}.. | tee git.diff
-    - uses: Swatinem/rust-cache@v2
+    - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
     - name: Mutants
       run: |
         cargo mutants --no-shuffle -vV --in-diff git.diff
     - name: Archive mutants.out
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
       if: always()
       with:
         name: mutants-incremental.out
