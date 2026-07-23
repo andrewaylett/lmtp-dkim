@@ -36,7 +36,7 @@ winnow = "1"
 # ring provides RSA-PKCS1v15-SHA256 and Ed25519, the two DKIM algorithms
 # defined in RFC 6376 section 3.3 and RFC 8463.
 ring   = "0.17"
-base64 = "0.22"
+base64 = "0.23"
 
 # DNS – used to look up DKIM public keys (_domainkey TXT records, RFC 6376 §3.6)
 # and for SPF/DMARC lookups in the service.
