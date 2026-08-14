@@ -75,6 +75,6 @@ jobs:
     - name: Check out
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-    - uses: andrewaylett/pre-commit-action@31bd944e408d6c7042c756a7d4571cfbcd096153 # v4
+    - uses: andrewaylett/pre-commit-action@176418334eeb955e09a2aac7e4d765111cd0dfae # v4
       with:
         extra_args: --all-files --hook-stage pre-merge-commit
